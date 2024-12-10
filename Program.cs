@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using go_around.Services;
+using GooglePlaces.Services;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
@@ -23,6 +24,8 @@ IHost host = Host.CreateDefaultBuilder(args)
       services.AddScoped<UpdateHandler>();
       services.AddScoped<ReceiverService>();
       services.AddHostedService<PollingService>();
+
+      services.AddTransient<IGooglePlacesService, GooglePlacesService>();
     })
     .Build();
 
