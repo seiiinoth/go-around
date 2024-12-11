@@ -26,6 +26,8 @@ IHost host = Host.CreateDefaultBuilder(args)
       services.AddHostedService<PollingService>();
 
       services.AddTransient<IGooglePlacesService, GooglePlacesService>();
+
+      services.AddTransient<IHttpCacheService, HttpCacheService>();
     })
     .Build();
 
