@@ -1,0 +1,28 @@
+services:
+  redis-cache:
+    image: redis:8.0-M02
+    ports:
+      - "${REDIS_CACHE_EXTERNAL_PORT:-6378}:6379"
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./backups/redis-cache:/data
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_CACHE_PASSWORD:?error}
+    networks:
+      - local
+
+  redis-store:
+    image: redis:8.0-M02
+    ports:
+      - "${REDIS_STORE_EXTERNAL_PORT:-6379}:6379"
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./backups/redis-store:/data
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_STORE_PASSWORD:?error}
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge
