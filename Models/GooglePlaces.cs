@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace GooglePlaces.Models
 {
   public enum RankPreference { RANK_PREFERENCE_UNSPECIFIED, DISTANCE, POPULARITY }
@@ -11,9 +13,45 @@ namespace GooglePlaces.Models
     public List<string> IncludedPrimaryTypes { get; set; } = [];
     public List<string> ExcludedPrimaryTypes { get; set; } = [];
     public decimal MaxResultCount { get; set; }
-    public required Circle LocationRestriction { get; set; }
+    public required LocationRestriction LocationRestriction { get; set; }
     public RankPreference RankPreference { get; set; } = RankPreference.POPULARITY;
-    public decimal RoutingParameters { get; set; }
+    public RoutingParameters? RoutingParameters { get; set; }
+  }
+
+  public class RoutingParameters
+  {
+    public required LatLng? Origin { get; set; }
+    public required TravelMode? TravelMode { get; set; }
+    public required RouteModifiers? RouteModifiers { get; set; }
+    public required RoutingPreference? RoutingPreference { get; set; }
+  }
+
+  public enum TravelMode
+  {
+    DRIVE,
+    BICYCLE,
+    WALK,
+    TWO_WHEELER
+  }
+
+  public class RouteModifiers
+  {
+    public bool? AvoidTolls { get; set; }
+    public bool? AvoidHighways { get; set; }
+    public bool? AvoidFerries { get; set; }
+    public bool? AvoidIndoor { get; set; }
+  }
+
+  public enum RoutingPreference
+  {
+    TRAFFIC_UNAWARE,
+    TRAFFIC_AWARE,
+    TRAFFIC_AWARE_OPTIMAL
+  }
+
+  public class LocationRestriction
+  {
+    public required Circle Circle { get; set; }
   }
 
   public class Circle
@@ -24,14 +62,14 @@ namespace GooglePlaces.Models
 
   public class LatLng
   {
-    public decimal Latitude { get; set; }
-    public decimal Longitude { get; set; }
+    public required double Latitude { get; set; }
+    public required double Longitude { get; set; }
   }
 
   public class SearchNearbyQueryOutput
   {
-    public required List<Place> Places { get; set; } = [];
-    public required List<RoutingSummary> RoutingSummaries { get; set; } = [];
+    public List<Place> Places { get; set; } = [];
+    public List<RoutingSummary> RoutingSummaries { get; set; } = [];
   }
 
   public class Place
@@ -57,7 +95,9 @@ namespace GooglePlaces.Models
     public OpeningHours? RegularOpeningHours { get; set; }
     public List<Photo>? Photos { get; set; }
     public string? AdrFormatAddress { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public BusinessStatus? BusinessStatus { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public PriceLevel? PriceLevel { get; set; }
     public List<Attribution>? Attributions { get; set; }
     public string? IconMaskBaseUri { get; set; }
@@ -156,6 +196,7 @@ namespace GooglePlaces.Models
   {
     public List<Period>? Periods { get; set; }
     public List<string>? WeekdayDescriptions { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public SecondaryHoursType? SecondaryHoursType { get; set; }
     public List<SpecialDay>? SpecialDays { get; set; }
     public string? NextOpenTime { get; set; }
@@ -212,7 +253,7 @@ namespace GooglePlaces.Models
     public string? Name { get; set; }
     public int? WidthPx { get; set; }
     public int? HeightPx { get; set; }
-    public AuthorAttribution? AuthorAttributions { get; set; }
+    public List<AuthorAttribution>? AuthorAttributions { get; set; }
     public string? FlagContentUri { get; set; }
     public string? GoogleMapsUri { get; set; }
   }
@@ -383,6 +424,7 @@ namespace GooglePlaces.Models
     public string? PlaceId { get; set; }
     public LocalizedText? DisplayName { get; set; }
     public List<string>? Types { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public SpatialRelationship? SpatialRelationship { get; set; }
     public decimal? StraightLineDistanceMeters { get; set; }
     public decimal? TravelDistanceMeters { get; set; }
@@ -404,6 +446,7 @@ namespace GooglePlaces.Models
     public string? Name { get; set; }
     public string? PlaceId { get; set; }
     public LocalizedText? DisplayName { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public Containment? Containment { get; set; }
   }
 
