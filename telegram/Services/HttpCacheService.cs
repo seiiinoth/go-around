@@ -73,6 +73,7 @@ namespace go_around.Services
       };
 
       await _db.HashSetAsync(requestKey, hashFields);
+      await _db.KeyExpireAsync(requestKey, TimeSpan.FromDays(7));
     }
 
     public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
