@@ -6,11 +6,12 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Text.Json;
 using go_around.Models;
+using go_around.Interfaces;
 using GooglePlaces.Models;
 
 namespace go_around.Services;
 
-public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, IUsersSessionsService usersSessionsService) : IUpdateHandler
+public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService SessionsStoreService) : IUpdateHandler
 {
   public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
   {
@@ -38,7 +39,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     if (msg.Text is not { } || !msg.Text.StartsWith('/'))
     {
-      if (await usersSessionsService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage") == "EnterLocation")
+      if (await SessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage") == "EnterLocation")
       {
         await EnterLocationHandler(msg);
       }
@@ -47,7 +48,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     if (msg.Text is not { } messageText)
       return;
 
-    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "Initial");
+    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "Initial");
 
     Message sentMessage = await (messageText.Split(' ')[0] switch
     {
@@ -79,7 +80,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
       return await bot.SendMessage(msg.Chat, errorMessage, parseMode: ParseMode.Html);
     }
 
-    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "Location", JsonSerializer.Serialize(location));
+    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "Location", JsonSerializer.Serialize(location));
 
     const string successMessage = "Very good!";
     return await RemoveKeyboard(msg, successMessage);
@@ -101,14 +102,14 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> RequestUserLocation(Message msg)
   {
-    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
+    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
     const string requestLocationMessage = """
             Provide your location to find places near you
             or enter your address manually
             """;
 
-    if (string.IsNullOrEmpty(await usersSessionsService.GetSessionAttribute(msg.Chat.Id.ToString(), "Location")))
+    if (string.IsNullOrEmpty(await SessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "Location")))
     {
       var replyMarkup = new ReplyKeyboardMarkup(true)
         .AddButton(KeyboardButton.WithRequestLocation("Location"));
@@ -126,7 +127,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> SendLocationRequest(Message msg)
   {
-    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
+    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
     const string requestLocationMessage = """
             Provide your location to find places near you

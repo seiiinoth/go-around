@@ -1,14 +1,15 @@
+using go_around.Interfaces;
 using StackExchange.Redis;
 
 namespace go_around.Services
 {
-  public class UsersSessionsService : IUsersSessionsService
+  public class SessionsStoreService : ISessionsStoreService
   {
     private readonly IDatabase _db;
     private readonly ILogger<HttpCacheService> _logger;
     private readonly TimeSpan _defaultDataTTL = TimeSpan.FromDays(30);
 
-    public UsersSessionsService(IConfiguration configuration, ILogger<HttpCacheService> logger)
+    public SessionsStoreService(IConfiguration configuration, ILogger<HttpCacheService> logger)
     {
       var _redis = ConnectionMultiplexer.Connect(configuration.GetConnectionString("RedisStore") ?? throw new InvalidOperationException("Redis store connection string is not configured"));
       _db = _redis.GetDatabase();

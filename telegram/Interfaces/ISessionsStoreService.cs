@@ -1,6 +1,6 @@
-namespace go_around.Services
+namespace go_around.Interfaces
 {
-  public interface IUsersSessionsService
+  public interface ISessionsStoreService
   {
     Task SetSessionAttributes(string userId, Dictionary<string, string> fields);
     Task SetSessionAttribute(string userId, string attributeName, string attributeValue);
