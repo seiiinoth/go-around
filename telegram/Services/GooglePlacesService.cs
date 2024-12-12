@@ -34,5 +34,32 @@ namespace GooglePlaces.Services
         throw;
       }
     }
+
+    public async Task<SearchTextQueryOutput> SearchTextAsync(SearchTextQueryInput searchTextQueryInput)
+    {
+      var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://places.googleapis.com/v1/places:searchText");
+      httpRequest.Headers.Add("X-Goog-Api-Key", _apiKey);
+      httpRequest.Headers.Add("X-Goog-FieldMask", "*");
+      httpRequest.Content = JsonContent.Create(searchTextQueryInput);
+
+      try
+      {
+        var request = await _httpClient.SendAsync(httpRequest);
+
+        if (request.IsSuccessStatusCode)
+        {
+          return await request.Content.ReadFromJsonAsync<SearchTextQueryOutput>() ?? throw new HttpRequestException("Error: Received null data from Google Places API");
+        }
+        else
+        {
+          string msg = await request.Content.ReadAsStringAsync();
+          throw new HttpRequestException($"Error fetching data from Google Places API: {msg}");
+        }
+      }
+      catch (Exception)
+      {
+        throw;
+      }
+    }
   }
 }
