@@ -4,10 +4,13 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using System.Text.Json;
+using go_around.Models;
+using GooglePlaces.Models;
 
 namespace go_around.Services;
 
-public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger) : IUpdateHandler
+public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, IUsersSessionsService usersSessionsService) : IUpdateHandler
 {
   public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
   {
@@ -32,68 +35,137 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
   private async Task OnMessage(Message msg)
   {
     logger.LogInformation("Receive message type: {MessageType}", msg.Type);
+
+    if (msg.Text is not { } || !msg.Text.StartsWith('/'))
+    {
+      if (await usersSessionsService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage") == "EnterLocation")
+      {
+        await EnterLocationHandler(msg);
+      }
+    }
+
     if (msg.Text is not { } messageText)
       return;
 
+    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "Initial");
+
     Message sentMessage = await (messageText.Split(' ')[0] switch
     {
-      "/inline_buttons" => SendInlineKeyboard(msg),
-      "/keyboard" => SendReplyKeyboard(msg),
-      "/remove" => RemoveKeyboard(msg),
-      "/request" => RequestLocation(msg),
+      "/start" => SendStartMessage(msg),
       _ => Usage(msg)
     });
+
     logger.LogInformation("The message was sent with id: {SentMessageId}", sentMessage.Id);
+  }
+
+  async Task<Message> EnterLocationHandler(Message msg)
+  {
+    var location = new LocationRecord { };
+
+    switch (msg.Type)
+    {
+      case MessageType.Location:
+        location.LatLng = new LatLng { Latitude = msg.Location!.Latitude, Longitude = msg.Location!.Longitude };
+        break;
+
+      case MessageType.Text:
+        location.TextQuery = msg.Text;
+        break;
+    }
+
+    if (location.TextQuery is null && location.LatLng is null)
+    {
+      const string errorMessage = "Please, provide your correct location to find places near you";
+      return await bot.SendMessage(msg.Chat, errorMessage, parseMode: ParseMode.Html);
+    }
+
+    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "Location", JsonSerializer.Serialize(location));
+
+    const string successMessage = "Very good!";
+    return await RemoveKeyboard(msg, successMessage);
   }
 
   async Task<Message> Usage(Message msg)
   {
     const string usage = """
             <b><u>Bot menu</u></b>:
-            /inline_buttons - send inline buttons
-            /keyboard       - send keyboard buttons
-            /remove         - remove keyboard buttons
-            /request        - request location or contact
+            /start          - start bot
             """;
     return await bot.SendMessage(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
   }
 
-  async Task<Message> SendInlineKeyboard(Message msg)
+  async Task<Message> RemoveKeyboard(Message msg, string message)
   {
+    return await bot.SendMessage(msg.Chat, message, replyMarkup: new ReplyKeyboardRemove());
+  }
+
+  async Task<Message> RequestUserLocation(Message msg)
+  {
+    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
+
+    const string requestLocationMessage = """
+            Provide your location to find places near you
+            or enter your address manually
+            """;
+
+    if (string.IsNullOrEmpty(await usersSessionsService.GetSessionAttribute(msg.Chat.Id.ToString(), "Location")))
+    {
+      var replyMarkup = new ReplyKeyboardMarkup(true)
+        .AddButton(KeyboardButton.WithRequestLocation("Location"));
+
+      return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
+    }
+
     var inlineMarkup = new InlineKeyboardMarkup()
-        .AddNewRow("1.1", "1.2", "1.3")
-        .AddNewRow()
-            .AddButton("WithCallbackData", "CallbackData")
-            .AddButton(InlineKeyboardButton.WithUrl("WithUrl", "https://github.com/TelegramBots/Telegram.Bot"));
-    return await bot.SendMessage(msg.Chat, "Inline buttons:", replyMarkup: inlineMarkup);
+      .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
+      .AddNewRow()
+      .AddButton("Use my saved location", "UseSavedLocation");
+
+    return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
-  async Task<Message> SendReplyKeyboard(Message msg)
+  async Task<Message> SendLocationRequest(Message msg)
   {
-    var replyMarkup = new ReplyKeyboardMarkup(true)
-        .AddNewRow("1.1", "1.2", "1.3")
-        .AddNewRow().AddButton("2.1").AddButton("2.2");
-    return await bot.SendMessage(msg.Chat, "Keyboard buttons:", replyMarkup: replyMarkup);
-  }
+    await usersSessionsService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
-  async Task<Message> RemoveKeyboard(Message msg)
-  {
-    return await bot.SendMessage(msg.Chat, "Removing keyboard", replyMarkup: new ReplyKeyboardRemove());
-  }
+    const string requestLocationMessage = """
+            Provide your location to find places near you
+            """;
 
-  async Task<Message> RequestLocation(Message msg)
-  {
     var replyMarkup = new ReplyKeyboardMarkup(true)
         .AddButton(KeyboardButton.WithRequestLocation("Location"));
-    return await bot.SendMessage(msg.Chat, "Where are you?", replyMarkup: replyMarkup);
+
+    return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
   }
 
-  // Process Inline Keyboard callback data
+  async Task<Message> SendStartMessage(Message msg)
+  {
+    const string startMessage = """
+            Welcome to <b>Go Around</b>!
+
+            <b>GoAround</b> is a convenient and intuitive service that will help you easily find interesting places nearby.
+            No more spending hours searching for entertainment or places to relax.
+            With GoAround, you will instantly receive a personalized list of establishments according to your preferences
+            """;
+
+    var inlineMarkup = new InlineKeyboardMarkup().AddButton("GoAround!", "GoAround");
+    return await bot.SendMessage(msg.Chat, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+  }
+
   private async Task OnCallbackQuery(CallbackQuery callbackQuery)
   {
-    logger.LogInformation("Received inline keyboard callback from: {CallbackQueryId}", callbackQuery.Id);
-    await bot.AnswerCallbackQuery(callbackQuery.Id, $"Received {callbackQuery.Data}");
-    await bot.SendMessage(callbackQuery.Message!.Chat, $"Received {callbackQuery.Data}");
+    await bot.AnswerCallbackQuery(callbackQuery.Id, $"{callbackQuery.Data}");
+
+    switch (callbackQuery.Data)
+    {
+      case "GoAround":
+        await RequestUserLocation(callbackQuery.Message!);
+        break;
+
+      case "EnterOrSendLocation":
+        await SendLocationRequest(callbackQuery.Message!);
+        break;
+    }
   }
 
   private Task UnknownUpdateHandlerAsync(Update update)
