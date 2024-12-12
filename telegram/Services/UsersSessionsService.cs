@@ -6,6 +6,7 @@ namespace go_around.Services
   {
     private readonly IDatabase _db;
     private readonly ILogger<HttpCacheService> _logger;
+    private readonly TimeSpan _defaultDataTTL = TimeSpan.FromDays(30);
 
     public UsersSessionsService(IConfiguration configuration, ILogger<HttpCacheService> logger)
     {
@@ -19,14 +20,14 @@ namespace go_around.Services
     {
       var hashFields = attributes.Select(kv => new HashEntry(kv.Key, kv.Value)).ToArray();
       await _db.HashSetAsync(userId, hashFields);
-      await _db.KeyExpireAsync(userId, TimeSpan.FromDays(30));
+      await _db.KeyExpireAsync(userId, _defaultDataTTL);
     }
 
     public async Task SetSessionAttribute(string userId, string attributeName, string attributeValue)
     {
       var hashFields = new HashEntry[] { new(attributeName, attributeValue) };
       await _db.HashSetAsync(userId, hashFields);
-      await _db.KeyExpireAsync(userId, TimeSpan.FromDays(30));
+      await _db.KeyExpireAsync(userId, _defaultDataTTL);
     }
 
     public async Task<Dictionary<string, string>?> GetSessionAttributes(string userId)
@@ -52,13 +53,13 @@ namespace go_around.Services
     {
       var hashFields = attributes.Select(attr => new RedisValue(attr)).ToArray();
       await _db.HashDeleteAsync(userId, hashFields);
-      await _db.KeyExpireAsync(userId, TimeSpan.FromDays(30));
+      await _db.KeyExpireAsync(userId, _defaultDataTTL);
     }
 
     public async Task DeleteSessionAttribute(string userId, string attribute)
     {
       await _db.HashDeleteAsync(userId, attribute);
-      await _db.KeyExpireAsync(userId, TimeSpan.FromDays(30));
+      await _db.KeyExpireAsync(userId, _defaultDataTTL);
     }
   }
 }
