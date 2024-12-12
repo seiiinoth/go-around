@@ -1,4 +1,29 @@
 services:
+  telegram:
+    build:
+      context: ./telegram
+      dockerfile: Dockerfile
+    environment:
+      - BotConfiguration__BotToken
+      - GoogleCloud__ApiKey
+      - ConnectionStrings__RedisCache
+      - ConnectionStrings__RedisStore
+    restart: unless-stopped
+    depends_on:
+      redis-cache:
+        condition: service_started
+      redis-store:
+        condition: service_started
+    networks:
+      - local
+    develop:
+      watch:
+        - action: rebuild
+          path: ./telegram
+          ignore:
+            - bin/
+            - obj/
+
   redis-cache:
     image: redis:8.0-M02
     ports:
