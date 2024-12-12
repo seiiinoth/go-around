@@ -6,5 +6,7 @@ namespace go_around.Services
     Task SetSessionAttribute(string userId, string attributeName, string attributeValue);
     Task<Dictionary<string, string>?> GetSessionAttributes(string userId);
     Task<string> GetSessionAttribute(string userId, string attributeName);
+    Task DeleteSessionAttributes(string userId, List<string> attributes);
+    Task DeleteSessionAttribute(string userId, string attribute);
   }
 }

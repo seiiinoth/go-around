@@ -47,5 +47,18 @@ namespace go_around.Services
 
       return value.ToString();
     }
+
+    public async Task DeleteSessionAttributes(string userId, List<string> attributes)
+    {
+      var hashFields = attributes.Select(attr => new RedisValue(attr)).ToArray();
+      await _db.HashDeleteAsync(userId, hashFields);
+      await _db.KeyExpireAsync(userId, TimeSpan.FromDays(30));
+    }
+
+    public async Task DeleteSessionAttribute(string userId, string attribute)
+    {
+      await _db.HashDeleteAsync(userId, attribute);
+      await _db.KeyExpireAsync(userId, TimeSpan.FromDays(30));
+    }
   }
 }
