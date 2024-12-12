@@ -492,4 +492,98 @@ namespace GooglePlaces.Models
     public string? Duration { get; set; }
     public string? DistanceMeters { get; set; }
   }
+
+  public class SearchTextQueryInput
+  {
+    public required string TextQuery { get; set; }
+    public string? LanguageCode { get; set; }
+    public string? RegionCode { get; set; }
+    public RankPreference RankPreference { get; set; } = RankPreference.POPULARITY;
+    public string? IncludedType { get; set; }
+    public bool? OpenNow { get; set; }
+    public double? MinRating { get; set; }
+
+    [Obsolete("Deprecated: Use pageSize instead.", false)]
+    public int? MaxResultCount { get; set; }
+    public int? PageSize { get; set; }
+    public string? PageToken { get; set; }
+    public List<PriceLevel>? PriceLevels { get; set; }
+    public bool? StrictTypeFiltering { get; set; }
+    public LocationBias? LocationBias { get; set; }
+    public LocationRestriction? LocationRestriction { get; set; }
+    public EVOptions? EvOptions { get; set; }
+    public RoutingParameters? RoutingParameters { get; set; }
+    public SearchAlongRouteParameters? SearchAlongRouteParameters { get; set; }
+    public bool? IncludePureServiceAreaBusinesses { get; set; }
+  }
+
+  public class SearchTextQueryOutput
+  {
+    public List<Place> Places { get; set; } = [];
+    public List<RoutingSummary> RoutingSummaries { get; set; } = [];
+    public List<ContextualContent> ContextualContents { get; set; } = [];
+    public string? NextPageToken { get; set; }
+    public string? SearchUri { get; set; }
+  }
+
+  public class LocationBias
+  {
+    public Viewport? Rectangle { get; set; }
+    public Circle? Circle { get; set; }
+  }
+
+  public class EVOptions
+  {
+    public double? MinimumChargingRateKw { get; set; }
+    public List<EVConnectorType>? ConnectorTypes { get; set; }
+  }
+
+  public class SearchAlongRouteParameters
+  {
+    public required Polyline Polyline { get; set; }
+  }
+
+  public class Polyline
+  {
+    public required string EncodedPolyline { get; set; }
+  }
+
+  public class ContextualContent
+  {
+    public List<Review> Reviews { get; set; } = [];
+    public List<Photo> Photos { get; set; } = [];
+    public List<Justification> Justifications { get; set; } = [];
+
+  }
+
+  public class Justification
+  {
+    public ReviewJustification? ReviewJustification { get; set; }
+    public BusinessAvailabilityAttributesJustification? businessAvailabilityAttributesJustification { get; set; }
+  }
+
+  public class ReviewJustification
+  {
+    public HighlightedText? HighlightedText { get; set; }
+    public Review? Review { get; set; }
+  }
+
+  public class HighlightedText
+  {
+    public string? Text { get; set; }
+    public List<HighlightedTextRange>? HighlightedTextRanges { get; set; }
+  }
+
+  public class HighlightedTextRange
+  {
+    public int StartIndex { get; set; }
+    public int EndIndex { get; set; }
+  }
+
+  public class BusinessAvailabilityAttributesJustification
+  {
+    public bool? Takeout { get; set; }
+    public bool? Delivery { get; set; }
+    public bool? DineIn { get; set; }
+  }
 }
