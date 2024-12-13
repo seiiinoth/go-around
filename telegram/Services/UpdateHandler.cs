@@ -4,14 +4,13 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Text.Json;
 using go_around.Models;
 using go_around.Interfaces;
 using GooglePlaces.Models;
 
 namespace go_around.Services;
 
-public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService SessionsStoreService) : IUpdateHandler
+public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IUserSessionService userSessionService) : IUpdateHandler
 {
   public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
   {
@@ -39,7 +38,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     if (msg.Text is not { } || !msg.Text.StartsWith('/'))
     {
-      if (await SessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage") == "EnterLocation")
+      if (await sessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage") == "EnterLocation")
       {
         await EnterLocationHandler(msg);
       }
@@ -48,11 +47,12 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     if (msg.Text is not { } messageText)
       return;
 
-    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "Initial");
+    await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "Initial");
 
     Message sentMessage = await (messageText.Split(' ')[0] switch
     {
       "/start" => SendStartMessage(msg),
+      "/list" => ListLocations(msg),
       _ => Usage(msg)
     });
 
@@ -61,7 +61,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> EnterLocationHandler(Message msg)
   {
-    var location = new LocationRecord { };
+    var location = new LocationQuery { };
 
     switch (msg.Type)
     {
@@ -80,7 +80,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
       return await bot.SendMessage(msg.Chat, errorMessage, parseMode: ParseMode.Html);
     }
 
-    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "Location", JsonSerializer.Serialize(location));
+    await userSessionService.AddToSavedLocations(msg.Chat.Id.ToString(), location);
 
     const string successMessage = "Very good!";
     return await RemoveKeyboard(msg, successMessage);
@@ -90,9 +90,30 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
   {
     const string usage = """
             <b><u>Bot menu</u></b>:
-            /start          - start bot
+            /start - start bot
+            /locations - list locations
+            /help - show help
             """;
     return await bot.SendMessage(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
+  }
+
+  async Task<Message> ListLocations(Message msg)
+  {
+    var savedLocations = await userSessionService.GetSavedLocations(msg.Chat.Id.ToString());
+
+    if (savedLocations.Count == 0)
+    {
+      return await bot.SendMessage(msg.Chat, "You don't have saved locations");
+    }
+
+    const string listPlacesMessage = "Your saved locations:";
+
+    var inlineMarkup = new InlineKeyboardMarkup(savedLocations.Select(location =>
+    {
+      return new[] { InlineKeyboardButton.WithCallbackData(location.TextQuery ?? "Unknown location") };
+    }));
+
+    return await bot.SendMessage(msg.Chat, listPlacesMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
   async Task<Message> RemoveKeyboard(Message msg, string message)
@@ -102,14 +123,14 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> RequestUserLocation(Message msg)
   {
-    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
+    await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
     const string requestLocationMessage = """
             Provide your location to find places near you
             or enter your address manually
             """;
 
-    if (string.IsNullOrEmpty(await SessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "Location")))
+    if ((await userSessionService.GetSavedLocations(msg.Chat.Id.ToString())).Count == 0)
     {
       var replyMarkup = new ReplyKeyboardMarkup(true)
         .AddButton(KeyboardButton.WithRequestLocation("Location"));
@@ -127,7 +148,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> SendLocationRequest(Message msg)
   {
-    await SessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
+    await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
     const string requestLocationMessage = """
             Provide your location to find places near you
