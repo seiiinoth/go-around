@@ -42,6 +42,15 @@ namespace go_around.Services
       }
     }
 
+    public async Task<LocationQuery?> GetFromSavedLocations(string userId, Guid id)
+    {
+      var savedLocations = await GetSavedLocations(userId);
+
+      savedLocations.TryGetValue(id, out var locationQuery);
+
+      return locationQuery;
+    }
+
     public async Task AddToSavedLocations(string userId, LocationQuery locationQuery)
     {
       var savedLocations = await GetSavedLocations(userId);
