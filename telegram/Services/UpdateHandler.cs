@@ -103,17 +103,26 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     if (savedLocations.Count == 0)
     {
-      return await bot.SendMessage(msg.Chat, "You don't have saved locations");
+      const string locationsNotFoundMessage = "You don't have saved locations";
+
+      if (msg.From?.IsBot == true)
+      {
+        return await bot.EditMessageText(msg.Chat, msg.MessageId, locationsNotFoundMessage);
+      }
+      return await bot.SendMessage(msg.Chat, locationsNotFoundMessage);
     }
 
-    const string listPlacesMessage = "Your saved locations:";
-
+    const string listLocationsMessage = "Your saved locations:";
     var inlineMarkup = new InlineKeyboardMarkup(savedLocations.Select(location =>
     {
-      return new[] { InlineKeyboardButton.WithCallbackData(location.Value.TextQuery ?? $"Unknown location at {location.Value.LatLng?.Latitude} {location.Value.LatLng?.Longitude}", $"Location {location.Key}") };
+      return new[] { InlineKeyboardButton.WithCallbackData(location.Value.TextQuery ?? $"Unknown location at {location.Value.LatLng?.Latitude} {location.Value.LatLng?.Longitude}", $"LocationInfo {location.Key}") };
     }));
 
-    return await bot.SendMessage(msg.Chat, listPlacesMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, listLocationsMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+    return await bot.SendMessage(msg.Chat, listLocationsMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
   async Task<Message> RemoveKeyboard(Message msg, string message)
@@ -123,26 +132,24 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> RequestUserLocation(Message msg)
   {
-    await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
+    if ((await userSessionService.GetSavedLocations(msg.Chat.Id.ToString())).Count == 0)
+    {
+      return await SendLocationRequest(msg);
+    }
 
     const string requestLocationMessage = """
             Provide your location to find places near you
             or enter your address manually
             """;
-
-    if ((await userSessionService.GetSavedLocations(msg.Chat.Id.ToString())).Count == 0)
-    {
-      var replyMarkup = new ReplyKeyboardMarkup(true)
-        .AddButton(KeyboardButton.WithRequestLocation("Location"));
-
-      return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
-    }
-
     var inlineMarkup = new InlineKeyboardMarkup()
       .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
       .AddNewRow()
-      .AddButton("Use my saved location", "UseSavedLocation");
+      .AddButton("Use my saved location", "ToLocationsList");
 
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
     return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
@@ -150,10 +157,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
   {
     await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
-    const string requestLocationMessage = """
-            Provide your location to find places near you
-            """;
-
+    const string requestLocationMessage = "Provide your location to find places near you";
     var replyMarkup = new ReplyKeyboardMarkup(true)
         .AddButton(KeyboardButton.WithRequestLocation("Location"));
 
@@ -174,20 +178,56 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     return await bot.SendMessage(msg.Chat, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
+  async Task<Message> SendLocationInfo(Message msg, string locationId)
+  {
+    var location = await userSessionService.GetFromSavedLocations(msg.Chat.Id.ToString(), Guid.Parse(locationId));
+
+    if (location is null)
+    {
+      const string locationNotFoundMessage = "Location not found";
+      var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup().AddButton("Back to locations list", $"ToLocationsList");
+
+      if (msg.From?.IsBot == true)
+      {
+        return await bot.EditMessageText(msg.Chat, msg.MessageId, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
+      }
+      return await bot.SendMessage(msg.Chat, locationNotFoundMessage, replyMarkup: locationNotFoundButtonsMarkup);
+    }
+
+    string locationInfo = location.TextQuery ?? $"Unknown location at {location.LatLng?.Latitude} {location.LatLng?.Longitude}";
+    var inlineMarkup = new InlineKeyboardMarkup()
+                          .AddButton("Remove", $"Remove {locationId}")
+                          .AddNewRow()
+                          .AddButton("GoAround!", $"GoAroundLocation {locationId}")
+                          .AddNewRow()
+                          .AddButton("Back to locations list", $"ToLocationsList");
+
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+
+    return await bot.SendMessage(msg.Chat, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+  }
+
   private async Task OnCallbackQuery(CallbackQuery callbackQuery)
   {
     await bot.AnswerCallbackQuery(callbackQuery.Id, $"{callbackQuery.Data}");
 
-    switch (callbackQuery.Data)
-    {
-      case "GoAround":
-        await RequestUserLocation(callbackQuery.Message!);
-        break;
+    var msg = callbackQuery.Message;
 
-      case "EnterOrSendLocation":
-        await SendLocationRequest(callbackQuery.Message!);
-        break;
+    if (msg is null)
+    {
+      return;
     }
+
+    await (callbackQuery.Data?.Split(' ')[0] switch
+    {
+      "GoAround" => RequestUserLocation(msg),
+      "LocationInfo" => SendLocationInfo(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
+      "ToLocationsList" => ListLocations(msg),
+      _ => Usage(msg)
+    });
   }
 
   private Task UnknownUpdateHandlerAsync(Update update)
