@@ -8,6 +8,6 @@ namespace go_around.Interfaces
     Task SetSavedLocations(string userId, Dictionary<Guid, LocationQuery> locationQueries);
     Task<LocationQuery?> GetFromSavedLocations(string userId, Guid id);
     Task AddToSavedLocations(string userId, LocationQuery locationQuery);
-    Task RemoveFromSavedLocation(string userId, Guid id);
+    Task<bool> RemoveFromSavedLocations(string userId, Guid id);
   }
 }

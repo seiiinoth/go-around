@@ -196,7 +196,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     string locationInfo = location.TextQuery ?? $"Unknown location at {location.LatLng?.Latitude} {location.LatLng?.Longitude}";
     var inlineMarkup = new InlineKeyboardMarkup()
-                          .AddButton("Remove", $"Remove {locationId}")
+                          .AddButton("Remove", $"RemoveLocation {locationId}")
                           .AddNewRow()
                           .AddButton("GoAround!", $"GoAroundLocation {locationId}")
                           .AddNewRow()
@@ -206,8 +206,26 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     {
       return await bot.EditMessageText(msg.Chat, msg.MessageId, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
-
     return await bot.SendMessage(msg.Chat, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+  }
+
+  async Task<Message> RemoveSavedLocation(Message msg, string locationId)
+  {
+    var result = await userSessionService.RemoveFromSavedLocations(msg.Chat.Id.ToString(), Guid.Parse(locationId));
+
+    string message = "Location removed";
+    if (!result)
+    {
+      message = "Location not found";
+    }
+
+    var inlineMarkup = new InlineKeyboardMarkup().AddButton("Back to locations list", $"ToLocationsList");
+
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+    return await bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
   private async Task OnCallbackQuery(CallbackQuery callbackQuery)
@@ -225,6 +243,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     {
       "GoAround" => RequestUserLocation(msg),
       "LocationInfo" => SendLocationInfo(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
+      "RemoveLocation" => RemoveSavedLocation(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
       "ToLocationsList" => ListLocations(msg),
       _ => Usage(msg)
     });

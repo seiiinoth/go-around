@@ -60,14 +60,18 @@ namespace go_around.Services
       await SetSavedLocations(userId, savedLocations);
     }
 
-    public async Task RemoveFromSavedLocation(string userId, Guid id)
+    public async Task<bool> RemoveFromSavedLocations(string userId, Guid id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
-      if (savedLocations.Remove(id))
+      var result = savedLocations.Remove(id);
+
+      if (result)
       {
         await SetSavedLocations(userId, savedLocations);
       }
+
+      return result;
     }
   }
 }
