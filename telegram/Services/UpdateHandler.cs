@@ -92,7 +92,6 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             <b><u>Bot menu</u></b>:
             /start - start bot
             /locations - list locations
-            /help - show help
             """;
     return await bot.SendMessage(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
   }
@@ -105,18 +104,24 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     {
       const string locationsNotFoundMessage = "You don't have saved locations";
 
+      var backToMenuButton = new InlineKeyboardMarkup()
+                                  .AddButton("Back to menu", "GoToMenu");
+
       if (msg.From?.IsBot == true)
       {
-        return await bot.EditMessageText(msg.Chat, msg.MessageId, locationsNotFoundMessage);
+        return await bot.EditMessageText(msg.Chat, msg.MessageId, locationsNotFoundMessage, replyMarkup: backToMenuButton);
       }
-      return await bot.SendMessage(msg.Chat, locationsNotFoundMessage);
+      return await bot.SendMessage(msg.Chat, locationsNotFoundMessage, replyMarkup: backToMenuButton);
     }
 
     const string listLocationsMessage = "Your saved locations:";
+
     var inlineMarkup = new InlineKeyboardMarkup(savedLocations.Select(location =>
     {
-      return new[] { InlineKeyboardButton.WithCallbackData(location.Value.TextQuery ?? $"Unknown location at {location.Value.LatLng?.Latitude} {location.Value.LatLng?.Longitude}", $"LocationInfo {location.Key}") };
+      return InlineKeyboardButton.WithCallbackData(location.Value.TextQuery ?? $"Unknown location at {location.Value.LatLng?.Latitude} {location.Value.LatLng?.Longitude}", $"LocationInfo {location.Key}");
     }));
+
+    inlineMarkup.AddNewRow().AddButton("Back to menu", "GoToMenu");
 
     if (msg.From?.IsBot == true)
     {
@@ -142,9 +147,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             or enter your address manually
             """;
     var inlineMarkup = new InlineKeyboardMarkup()
-      .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
-      .AddNewRow()
-      .AddButton("Use my saved location", "ToLocationsList");
+                            .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
+                            .AddNewRow()
+                            .AddButton("Use my saved location", "ToLocationsList");
 
     if (msg.From?.IsBot == true)
     {
@@ -159,7 +164,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     const string requestLocationMessage = "Provide your location to find places near you";
     var replyMarkup = new ReplyKeyboardMarkup(true)
-        .AddButton(KeyboardButton.WithRequestLocation("Location"));
+                          .AddButton(KeyboardButton.WithRequestLocation("Location"));
 
     return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
   }
@@ -173,8 +178,13 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
             No more spending hours searching for entertainment or places to relax.
             With GoAround, you will instantly receive a personalized list of establishments according to your preferences
             """;
+    var inlineMarkup = new InlineKeyboardMarkup()
+                            .AddButton("GoAround!", "GoAround");
 
-    var inlineMarkup = new InlineKeyboardMarkup().AddButton("GoAround!", "GoAround");
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
     return await bot.SendMessage(msg.Chat, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
@@ -185,7 +195,8 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     if (location is null)
     {
       const string locationNotFoundMessage = "Location not found";
-      var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup().AddButton("Back to locations list", $"ToLocationsList");
+      var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup()
+                                              .AddButton("Back to locations list", $"ToLocationsList");
 
       if (msg.From?.IsBot == true)
       {
@@ -196,11 +207,11 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     string locationInfo = location.TextQuery ?? $"Unknown location at {location.LatLng?.Latitude} {location.LatLng?.Longitude}";
     var inlineMarkup = new InlineKeyboardMarkup()
-                          .AddButton("Remove", $"RemoveLocation {locationId}")
-                          .AddNewRow()
-                          .AddButton("GoAround!", $"GoAroundLocation {locationId}")
-                          .AddNewRow()
-                          .AddButton("Back to locations list", $"ToLocationsList");
+                            .AddButton("Remove", $"RemoveLocation {locationId}")
+                            .AddNewRow()
+                            .AddButton("GoAround!", $"GoAroundLocation {locationId}")
+                            .AddNewRow()
+                            .AddButton("Back to locations list", $"ToLocationsList");
 
     if (msg.From?.IsBot == true)
     {
@@ -219,7 +230,8 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
       message = "Location not found";
     }
 
-    var inlineMarkup = new InlineKeyboardMarkup().AddButton("Back to locations list", $"ToLocationsList");
+    var inlineMarkup = new InlineKeyboardMarkup()
+                            .AddButton("Back to locations list", $"ToLocationsList");
 
     if (msg.From?.IsBot == true)
     {
@@ -241,6 +253,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     await (callbackQuery.Data?.Split(' ')[0] switch
     {
+      "GoToMenu" => SendStartMessage(msg),
       "GoAround" => RequestUserLocation(msg),
       "LocationInfo" => SendLocationInfo(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
       "RemoveLocation" => RemoveSavedLocation(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
