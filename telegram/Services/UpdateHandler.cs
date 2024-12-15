@@ -52,7 +52,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     Message sentMessage = await (messageText.Split(' ')[0] switch
     {
       "/start" => SendStartMessage(msg),
-      "/list" => ListLocations(msg),
+      "/locations" => ListLocations(msg),
       _ => Usage(msg)
     });
 
@@ -110,7 +110,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     var inlineMarkup = new InlineKeyboardMarkup(savedLocations.Select(location =>
     {
-      return new[] { InlineKeyboardButton.WithCallbackData(location.TextQuery ?? "Unknown location") };
+      return new[] { InlineKeyboardButton.WithCallbackData(location.Value.TextQuery ?? $"Unknown location at {location.Value.LatLng?.Latitude} {location.Value.LatLng?.Longitude}", $"Location {location.Key}") };
     }));
 
     return await bot.SendMessage(msg.Chat, listPlacesMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);

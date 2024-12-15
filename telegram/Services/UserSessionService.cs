@@ -8,7 +8,7 @@ namespace go_around.Services
   {
     private readonly ISessionsStoreService _sessionsStoreService = sessionsStoreService;
 
-    public async Task<List<LocationQuery>> GetSavedLocations(string userId)
+    public async Task<Dictionary<Guid, LocationQuery>> GetSavedLocations(string userId)
     {
       var savedLocationsJson = await _sessionsStoreService.GetSessionAttribute(userId, "Locations");
 
@@ -19,7 +19,7 @@ namespace go_around.Services
 
       try
       {
-        return JsonSerializer.Deserialize<List<LocationQuery>>(savedLocationsJson) ?? [];
+        return JsonSerializer.Deserialize<Dictionary<Guid, LocationQuery>>(savedLocationsJson) ?? [];
       }
       catch (JsonException)
       {
@@ -28,7 +28,7 @@ namespace go_around.Services
       }
     }
 
-    public async Task SetSavedLocations(string userId, List<LocationQuery> locationQueries)
+    public async Task SetSavedLocations(string userId, Dictionary<Guid, LocationQuery> locationQueries)
     {
       try
       {
@@ -46,28 +46,19 @@ namespace go_around.Services
     {
       var savedLocations = await GetSavedLocations(userId);
 
-      savedLocations.Add(locationQuery);
+      savedLocations.Add(Guid.NewGuid(), locationQuery);
 
       await SetSavedLocations(userId, savedLocations);
     }
 
-    public async Task RemoveFromSavedLocations(string userId, LocationQuery locationQuery)
+    public async Task RemoveFromSavedLocation(string userId, Guid id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
-      savedLocations.Remove(locationQuery);
-
-      await SetSavedLocations(userId, savedLocations);
-    }
-
-    public async Task RemoveFromSavedLocations(string userId, int index)
-    {
-      var savedLocations = await GetSavedLocations(userId);
-
-      savedLocations.RemoveAt(index);
-
-      await SetSavedLocations(userId, savedLocations);
+      if (savedLocations.Remove(id))
+      {
+        await SetSavedLocations(userId, savedLocations);
+      }
     }
   }
-
 }
