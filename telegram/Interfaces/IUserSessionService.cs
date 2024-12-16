@@ -9,5 +9,9 @@ namespace go_around.Interfaces
     Task<LocationQuery?> GetFromSavedLocations(string userId, Guid id);
     Task AddToSavedLocations(string userId, LocationQuery locationQuery);
     Task<bool> RemoveFromSavedLocations(string userId, Guid id);
+    Task ClearSavedLocations(string userId);
+    Task<List<string>?> GetLocationPlacesCategories(string userId, Guid locationId);
+    Task AddLocationPlacesCategories(string userId, Guid locationId, string category);
+    Task RemoveLocationPlacesCategories(string userId, Guid locationId, string category);
   }
 }

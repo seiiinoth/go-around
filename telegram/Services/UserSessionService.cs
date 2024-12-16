@@ -73,5 +73,41 @@ namespace go_around.Services
 
       return result;
     }
+
+    public async Task ClearSavedLocations(string userId)
+    {
+      await SetSavedLocations(userId, []);
+    }
+
+    public async Task<List<string>?> GetLocationPlacesCategories(string userId, Guid locationId)
+    {
+      var location = await GetFromSavedLocations(userId, locationId);
+
+      return location?.PlacesCategories;
+    }
+
+    public async Task AddLocationPlacesCategories(string userId, Guid locationId, string category)
+    {
+      var location = await GetFromSavedLocations(userId, locationId);
+
+      if (location is null)
+      {
+        return;
+      }
+
+      location.PlacesCategories?.Add(category);
+    }
+
+    public async Task RemoveLocationPlacesCategories(string userId, Guid locationId, string category)
+    {
+      var location = await GetFromSavedLocations(userId, locationId);
+
+      if (location is null)
+      {
+        return;
+      }
+
+      location.PlacesCategories?.Remove(category);
+    }
   }
 }
