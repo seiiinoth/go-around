@@ -38,10 +38,14 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     if (msg.Text is not { } || !msg.Text.StartsWith('/'))
     {
-      if (await sessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage") == "EnterLocation")
+      var workingStage = await sessionsStoreService.GetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage");
+
+      await (workingStage.Split(' ')[0] switch
       {
-        await EnterLocationHandler(msg);
-      }
+        "EnterLocation" => EnterLocationHandler(msg),
+        "EnterLocationRadius" => EnterLocationRadiusHandler(msg, workingStage.Split(' ')[1]),
+        _ => Usage(msg)
+      });
     }
 
     if (msg.Text is not { } messageText)
@@ -63,15 +67,14 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
   {
     var location = new LocationQuery { };
 
-    switch (msg.Type)
+    if (msg.Location is not null)
     {
-      case MessageType.Location:
-        location.LatLng = new LatLng { Latitude = msg.Location!.Latitude, Longitude = msg.Location!.Longitude };
-        break;
+      location.LatLng = new LatLng { Latitude = msg.Location.Latitude, Longitude = msg.Location.Longitude };
+    }
 
-      case MessageType.Text:
-        location.TextQuery = msg.Text;
-        break;
+    if (msg.Text is not null)
+    {
+      location.TextQuery = msg.Text;
     }
 
     if (location.TextQuery is null && location.LatLng is null)
@@ -80,10 +83,38 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
       return await bot.SendMessage(msg.Chat, errorMessage, parseMode: ParseMode.Html);
     }
 
-    await userSessionService.AddToSavedLocations(msg.Chat.Id.ToString(), location);
+    await userSessionService.AddSavedLocation(msg.Chat.Id.ToString(), location);
 
     const string successMessage = "Very good!";
     return await RemoveKeyboard(msg, successMessage);
+  }
+
+  async Task<Message> EnterLocationRadiusHandler(Message msg, string locationId)
+  {
+    if (msg.Text is null)
+    {
+      return await SendLocationRadiusRequest(msg, locationId);
+    }
+
+    try
+    {
+      var locationRadius = int.Parse(msg.Text ?? "0");
+
+      var location = await userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
+
+      if (location is not null)
+      {
+        location.Radius = locationRadius;
+
+        await userSessionService.UpdateSavedLocation(msg.Chat.Id.ToString(), locationId, location);
+      }
+
+      return await GoAroundLocation(msg, locationId);
+    }
+    catch (Exception)
+    {
+      return await SendLocationRadiusRequest(msg, locationId);
+    }
   }
 
   async Task<Message> Usage(Message msg)
@@ -142,10 +173,11 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
       return await SendLocationRequest(msg);
     }
 
-    const string requestLocationMessage = """
+    const string requestUserLocationMessage = """
             Provide your location to find places near you
             or enter your address manually
             """;
+
     var inlineMarkup = new InlineKeyboardMarkup()
                             .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
                             .AddNewRow()
@@ -153,9 +185,9 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     if (msg.From?.IsBot == true)
     {
-      return await bot.EditMessageText(msg.Chat, msg.MessageId, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, requestUserLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
-    return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    return await bot.SendMessage(msg.Chat, requestUserLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
   }
 
   async Task<Message> SendLocationRequest(Message msg)
@@ -163,10 +195,109 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocation");
 
     const string requestLocationMessage = "Provide your location to find places near you";
+
     var replyMarkup = new ReplyKeyboardMarkup(true)
                           .AddButton(KeyboardButton.WithRequestLocation("Location"));
 
     return await bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
+  }
+
+  async Task<Message> SendLocationRadiusRequest(Message msg, string locationId)
+  {
+    await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", $"EnterLocationRadius {locationId}");
+
+    string locationRadiusRequestMessage = $"""
+    Specify the radius in meters around which the search will be performed.
+    The value must be specified as an integer, without periods or commas.
+
+    <b>Example:</b> {new Random().Next(10, 1000)}
+    """;
+
+    var inlineMarkup = new ReplyKeyboardMarkup(true)
+                          .AddButtons("500", "1000")
+                          .AddNewRow()
+                          .AddButtons("1500", "2000")
+                          .AddNewRow()
+                          .AddButtons("2500", "3000")
+                          .AddNewRow()
+                          .AddButtons("Back to menu", "GoToMenu");
+
+    return await bot.SendMessage(msg.Chat, locationRadiusRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+  }
+
+  async Task<Message> SendLocationPlacesTypesRequest(Message msg, string locationId)
+  {
+    await sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "EnterLocationTypes");
+
+    var selectedPlacesCategories = await userSessionService.GetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId);
+
+    string locationTypesRequestMessage = "Specify the places categories";
+
+    var inlineMarkup = new InlineKeyboardMarkup();
+    List<InlineKeyboardButton> currentRow = [];
+
+    GooglePlacesTypes.Categories.ToList().ForEach(category =>
+    {
+      var categoryName = category.Key;
+
+      if (selectedPlacesCategories?.Contains(category.Key) == true)
+      {
+        categoryName += " ✓";
+      }
+
+      var button = InlineKeyboardButton.WithCallbackData(categoryName, $"SelLocPlcCat {locationId} {category.Key}");
+
+      if (categoryName.Length > 15)
+      {
+        if (currentRow.Count > 0)
+        {
+          inlineMarkup.AddNewRow().AddButtons([.. currentRow]);
+          currentRow.Clear();
+        }
+
+        inlineMarkup.AddNewRow().AddButton(button);
+      }
+      else
+      {
+        currentRow.Add(button);
+
+        if (currentRow.Count == 2)
+        {
+          inlineMarkup.AddNewRow().AddButtons([.. currentRow]);
+          currentRow.Clear();
+        }
+      }
+    });
+
+    if (currentRow.Count > 0)
+    {
+      inlineMarkup.AddNewRow().AddButtons([.. currentRow]);
+    }
+
+    inlineMarkup.AddNewRow().AddButton("Confirm", "ConfirmLocationPlacesCategories")
+                .AddNewRow().AddButton("Back to menu", "GoToMenu");
+
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, locationTypesRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+    return await bot.SendMessage(msg.Chat, locationTypesRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+  }
+
+  async Task<Message> SelectLocationPlacesCategory(Message msg, string locationId, string category)
+  {
+    var locationPlaces = await userSessionService.GetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId);
+
+    if (locationPlaces?.Contains(category) == true)
+    {
+      await userSessionService.RemoveLocationPlacesCategory(msg.Chat.Id.ToString(), locationId, category);
+    }
+    else
+    {
+      await userSessionService.AddLocationPlacesCategory(msg.Chat.Id.ToString(), locationId, category);
+    }
+
+    return await SendLocationPlacesTypesRequest(msg, locationId);
   }
 
   async Task<Message> SendStartMessage(Message msg)
@@ -190,7 +321,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> SendLocationInfo(Message msg, string locationId)
   {
-    var location = await userSessionService.GetFromSavedLocations(msg.Chat.Id.ToString(), Guid.Parse(locationId));
+    var location = await userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
 
     if (location is null)
     {
@@ -222,7 +353,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
   async Task<Message> RemoveSavedLocation(Message msg, string locationId)
   {
-    var result = await userSessionService.RemoveFromSavedLocations(msg.Chat.Id.ToString(), Guid.Parse(locationId));
+    var result = await userSessionService.RemoveSavedLocation(msg.Chat.Id.ToString(), locationId);
 
     string message = "Location removed";
     if (!result)
@@ -232,6 +363,49 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     var inlineMarkup = new InlineKeyboardMarkup()
                             .AddButton("Back to locations list", $"ToLocationsList");
+
+    if (msg.From?.IsBot == true)
+    {
+      return await bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+    return await bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+  }
+
+  async Task<Message> GoAroundLocation(Message msg, string locationId)
+  {
+    var location = await userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
+
+    if (location is null)
+    {
+      const string locationNotFoundMessage = "Location not found";
+      var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup()
+                                              .AddButton("To locations list", $"ToLocationsList");
+
+      if (msg.From?.IsBot == true)
+      {
+        return await bot.EditMessageText(msg.Chat, msg.MessageId, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
+      }
+      return await bot.SendMessage(msg.Chat, locationNotFoundMessage, replyMarkup: locationNotFoundButtonsMarkup);
+    }
+
+    if ((location.LatLng is null || location.LatLng.Latitude == 0 || location.LatLng.Longitude == 0) && location.TextQuery is null)
+    {
+      return await SendLocationRequest(msg);
+    }
+
+    if (location.Radius is null)
+    {
+      return await SendLocationRadiusRequest(msg, locationId);
+    }
+
+    if (location.PlacesCategories is null)
+    {
+      return await SendLocationPlacesTypesRequest(msg, locationId);
+    }
+
+    const string message = "Searching for places...";
+    var inlineMarkup = new InlineKeyboardMarkup()
+                            .AddButton("Back to menu", "GoToMenu");
 
     if (msg.From?.IsBot == true)
     {
@@ -255,8 +429,10 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     {
       "GoToMenu" => SendStartMessage(msg),
       "GoAround" => RequestUserLocation(msg),
+      "GoAroundLocation" => GoAroundLocation(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
       "LocationInfo" => SendLocationInfo(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
       "RemoveLocation" => RemoveSavedLocation(msg, callbackQuery.Data?.Split(' ')[1] ?? "0"),
+      "SelLocPlcCat" => SelectLocationPlacesCategory(msg, callbackQuery.Data?.Split(' ')[1] ?? "0", callbackQuery.Data?.Split(' ')[2] ?? "0"),
       "ToLocationsList" => ListLocations(msg),
       _ => Usage(msg)
     });
