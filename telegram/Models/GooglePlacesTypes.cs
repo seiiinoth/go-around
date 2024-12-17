@@ -399,7 +399,7 @@ namespace GooglePlaces.Models
       "town_square",
     ];
 
-    public static readonly Dictionary<string, string[]> Categories = new Dictionary<string, string[]>()
+    public static readonly Dictionary<string, string[]> Categories = new()
     {
       {"automotive", Automotive},
       {"business", Business},
@@ -420,7 +420,7 @@ namespace GooglePlaces.Models
       {"shopping", Shopping},
       {"sports", Sports},
       {"transportation", Transportation},
-      {"additionalPlaceTypeValues", AdditionalPlaceTypeValues},
+      // {"additionalPlaceTypeValues", AdditionalPlaceTypeValues},
     };
   }
 }
