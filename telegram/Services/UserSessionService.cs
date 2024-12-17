@@ -51,7 +51,7 @@ namespace go_around.Services
       return locationQuery;
     }
 
-    public async Task AddSavedLocation(string userId, LocationQuery locationQuery)
+    public async Task<string> AddSavedLocation(string userId, LocationQuery locationQuery)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -66,6 +66,8 @@ namespace go_around.Services
       savedLocations.Add(uuid, locationQuery);
 
       await SetSavedLocations(userId, savedLocations);
+
+      return uuid;
     }
 
     public async Task UpdateSavedLocation(string userId, string locationId, LocationQuery locationQuery)
@@ -127,6 +129,66 @@ namespace go_around.Services
 
         await UpdateSavedLocation(userId, locationId, location);
       }
+    }
+
+    private async Task SetLocationEditMode(string userId, string locationId, bool mode)
+    {
+      var location = await GetSavedLocation(userId, locationId);
+
+      if (location is not null)
+      {
+        location.EditMode = mode;
+
+        await UpdateSavedLocation(userId, locationId, location);
+      }
+    }
+
+    public async Task EnableLocationEditMode(string userId, string locationId)
+    {
+      // Edit mode can be enabled only for one document
+      var locations = await GetSavedLocations(userId);
+
+      foreach (var location in locations)
+      {
+        await DisableLocationEditMode(userId, location.Key);
+      }
+
+      await SetLocationEditMode(userId, locationId, true);
+    }
+
+    public async Task DisableLocationEditMode(string userId, string locationId)
+    {
+      await SetLocationEditMode(userId, locationId, false);
+    }
+
+    public async Task<string?> GetLocationIdWithEditMode(string userId)
+    {
+      var locations = await GetSavedLocations(userId);
+
+      return locations.FirstOrDefault(x => x.Value.EditMode).Key;
+    }
+
+    public async Task<WorkingStage?> GetSessionWorkingStage(string userId)
+    {
+      try
+      {
+        return Enum.Parse<WorkingStage>(await sessionsStoreService.GetSessionAttribute(userId, "WorkingStage"));
+      }
+      catch (Exception)
+      {
+        await ClearSessionWorkingStage(userId);
+        return null;
+      }
+    }
+
+    public async Task SetSessionWorkingStage(string userId, WorkingStage workingStage)
+    {
+      await sessionsStoreService.SetSessionAttribute(userId, "WorkingStage", workingStage.ToString());
+    }
+
+    public async Task ClearSessionWorkingStage(string userId)
+    {
+      await sessionsStoreService.DeleteSessionAttribute(userId, "WorkingStage");
     }
   }
 }
