@@ -8,7 +8,7 @@ namespace go_around.Services
   {
     private readonly ISessionsStoreService _sessionsStoreService = sessionsStoreService;
 
-    public async Task<Dictionary<Guid, LocationQuery>> GetSavedLocations(string userId)
+    public async Task<Dictionary<string, LocationQuery>> GetSavedLocations(string userId)
     {
       var savedLocationsJson = await _sessionsStoreService.GetSessionAttribute(userId, "Locations");
 
@@ -19,7 +19,7 @@ namespace go_around.Services
 
       try
       {
-        return JsonSerializer.Deserialize<Dictionary<Guid, LocationQuery>>(savedLocationsJson) ?? [];
+        return JsonSerializer.Deserialize<Dictionary<string, LocationQuery>>(savedLocationsJson) ?? [];
       }
       catch (JsonException)
       {
@@ -28,7 +28,7 @@ namespace go_around.Services
       }
     }
 
-    public async Task SetSavedLocations(string userId, Dictionary<Guid, LocationQuery> locationQueries)
+    public async Task SetSavedLocations(string userId, Dictionary<string, LocationQuery> locationQueries)
     {
       try
       {
@@ -42,7 +42,7 @@ namespace go_around.Services
       }
     }
 
-    public async Task<LocationQuery?> GetFromSavedLocations(string userId, Guid id)
+    public async Task<LocationQuery?> GetFromSavedLocations(string userId, string id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -55,12 +55,20 @@ namespace go_around.Services
     {
       var savedLocations = await GetSavedLocations(userId);
 
-      savedLocations.Add(Guid.NewGuid(), locationQuery);
+      string? uuid;
+
+      do
+      {
+        // Generate 7 chars long UUID
+        uuid = Guid.NewGuid().ToString().Split("-")[0][..7];
+      } while (savedLocations.ContainsKey(uuid));
+
+      savedLocations.Add(uuid, locationQuery);
 
       await SetSavedLocations(userId, savedLocations);
     }
 
-    public async Task<bool> RemoveFromSavedLocations(string userId, Guid id)
+    public async Task<bool> RemoveFromSavedLocations(string userId, string id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -79,14 +87,14 @@ namespace go_around.Services
       await SetSavedLocations(userId, []);
     }
 
-    public async Task<List<string>?> GetLocationPlacesCategories(string userId, Guid locationId)
+    public async Task<List<string>?> GetLocationPlacesCategories(string userId, string locationId)
     {
       var location = await GetFromSavedLocations(userId, locationId);
 
       return location?.PlacesCategories;
     }
 
-    public async Task AddLocationPlacesCategories(string userId, Guid locationId, string category)
+    public async Task AddLocationPlacesCategories(string userId, string locationId, string category)
     {
       var location = await GetFromSavedLocations(userId, locationId);
 
@@ -98,7 +106,7 @@ namespace go_around.Services
       location.PlacesCategories?.Add(category);
     }
 
-    public async Task RemoveLocationPlacesCategories(string userId, Guid locationId, string category)
+    public async Task RemoveLocationPlacesCategories(string userId, string locationId, string category)
     {
       var location = await GetFromSavedLocations(userId, locationId);
 
