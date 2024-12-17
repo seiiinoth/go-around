@@ -6,6 +6,7 @@ namespace go_around.Models
   {
     public LatLng? LatLng { get; set; }
     public string? TextQuery { get; set; }
-    public decimal Radius { get; set; }
+    public int? Radius { get; set; }
+    public List<string>? PlacesCategories { get; set; }
   }
 }

@@ -42,7 +42,7 @@ namespace go_around.Services
       }
     }
 
-    public async Task<LocationQuery?> GetFromSavedLocations(string userId, string id)
+    public async Task<LocationQuery?> GetSavedLocation(string userId, string id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -51,7 +51,7 @@ namespace go_around.Services
       return locationQuery;
     }
 
-    public async Task AddToSavedLocations(string userId, LocationQuery locationQuery)
+    public async Task AddSavedLocation(string userId, LocationQuery locationQuery)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -68,7 +68,16 @@ namespace go_around.Services
       await SetSavedLocations(userId, savedLocations);
     }
 
-    public async Task<bool> RemoveFromSavedLocations(string userId, string id)
+    public async Task UpdateSavedLocation(string userId, string locationId, LocationQuery locationQuery)
+    {
+      var savedLocations = await GetSavedLocations(userId);
+
+      savedLocations[locationId] = locationQuery;
+
+      await SetSavedLocations(userId, savedLocations);
+    }
+
+    public async Task<bool> RemoveSavedLocation(string userId, string id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -89,33 +98,35 @@ namespace go_around.Services
 
     public async Task<List<string>?> GetLocationPlacesCategories(string userId, string locationId)
     {
-      var location = await GetFromSavedLocations(userId, locationId);
+      var location = await GetSavedLocation(userId, locationId);
 
       return location?.PlacesCategories;
     }
 
-    public async Task AddLocationPlacesCategories(string userId, string locationId, string category)
+    public async Task AddLocationPlacesCategory(string userId, string locationId, string category)
     {
-      var location = await GetFromSavedLocations(userId, locationId);
+      var location = await GetSavedLocation(userId, locationId);
 
-      if (location is null)
+      if (location is not null)
       {
-        return;
-      }
+        location.PlacesCategories ??= [];
 
-      location.PlacesCategories?.Add(category);
+        location.PlacesCategories.Add(category);
+
+        await UpdateSavedLocation(userId, locationId, location);
+      }
     }
 
-    public async Task RemoveLocationPlacesCategories(string userId, string locationId, string category)
+    public async Task RemoveLocationPlacesCategory(string userId, string locationId, string category)
     {
-      var location = await GetFromSavedLocations(userId, locationId);
+      var location = await GetSavedLocation(userId, locationId);
 
-      if (location is null)
+      if (location is not null && location.PlacesCategories is not null)
       {
-        return;
-      }
+        location.PlacesCategories.Remove(category);
 
-      location.PlacesCategories?.Remove(category);
+        await UpdateSavedLocation(userId, locationId, location);
+      }
     }
   }
 }

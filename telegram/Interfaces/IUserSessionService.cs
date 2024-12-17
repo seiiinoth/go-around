@@ -6,12 +6,13 @@ namespace go_around.Interfaces
   {
     Task<Dictionary<string, LocationQuery>> GetSavedLocations(string userId);
     Task SetSavedLocations(string userId, Dictionary<string, LocationQuery> locationQueries);
-    Task<LocationQuery?> GetFromSavedLocations(string userId, string id);
-    Task AddToSavedLocations(string userId, LocationQuery locationQuery);
-    Task<bool> RemoveFromSavedLocations(string userId, string id);
+    Task<LocationQuery?> GetSavedLocation(string userId, string id);
+    Task AddSavedLocation(string userId, LocationQuery locationQuery);
+    Task UpdateSavedLocation(string userId, string locationId, LocationQuery locationQuery);
+    Task<bool> RemoveSavedLocation(string userId, string id);
     Task ClearSavedLocations(string userId);
     Task<List<string>?> GetLocationPlacesCategories(string userId, string locationId);
-    Task AddLocationPlacesCategories(string userId, string locationId, string category);
-    Task RemoveLocationPlacesCategories(string userId, string locationId, string category);
+    Task AddLocationPlacesCategory(string userId, string locationId, string category);
+    Task RemoveLocationPlacesCategory(string userId, string locationId, string category);
   }
 }
