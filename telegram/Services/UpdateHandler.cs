@@ -91,6 +91,8 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     var locationId = await userSessionService.AddSavedLocation(msg.Chat.Id.ToString(), location);
 
+    await bot.SendMessage(msg.Chat, "👍", replyMarkup: new ReplyKeyboardRemove());
+
     return await GoAroundLocation(msg, locationId);
   }
 
@@ -115,12 +117,15 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
         location.Radius = locationRadius;
 
         await userSessionService.UpdateSavedLocation(msg.Chat.Id.ToString(), locationId, location);
+
+        await bot.SendMessage(msg.Chat, "👍", replyMarkup: new ReplyKeyboardRemove());
       }
 
       return await GoAroundLocation(msg, locationId);
     }
-    catch (Exception)
+    catch (Exception err)
     {
+      Console.WriteLine($"Error parsing location radius: {err}");
       return await SendLocationRadiusRequest(msg, locationId);
     }
   }
@@ -128,6 +133,10 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
   async Task<Message> ConfirmLocationPlacesCategories(Message msg, string locationId)
   {
     await RemoveMessageWithReplyKeyboard(msg);
+
+    var locationPlacesCategories = await userSessionService.GetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId);
+    await userSessionService.SetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId, locationPlacesCategories);
+
     return await GoAroundLocation(msg, locationId);
   }
 
@@ -222,8 +231,8 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
 
     var inlineMarkup = new InlineKeyboardMarkup()
                             .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
-                            .AddNewRow()
-                            .AddButton("Use my saved location", "ToLocationsList");
+                            .AddNewRow().AddButton("Use my saved location", "ToLocationsList")
+                            .AddNewRow().AddButton("Back to menu", "GoToMenu");
 
     if (msg.From?.IsBot == true)
     {
@@ -373,6 +382,11 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
     var inlineMarkup = new InlineKeyboardMarkup()
                             .AddButton("GoAround!", "GoAround");
 
+    if ((await userSessionService.GetSavedLocations(msg.Chat.Id.ToString())).Count > 0)
+    {
+      inlineMarkup.AddNewRow().AddButton("View saved location", "ToLocationsList");
+    }
+
     if (msg.From?.IsBot == true)
     {
       return await bot.EditMessageText(msg.Chat, msg.MessageId, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
@@ -467,7 +481,7 @@ public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger
       return await SendLocationRequest(msg);
     }
 
-    if (location.Radius is null)
+    if (location.Radius is null || location.Radius == 0)
     {
       return await SendLocationRadiusRequest(msg, locationId);
     }
