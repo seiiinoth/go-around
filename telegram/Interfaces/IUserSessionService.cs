@@ -14,6 +14,7 @@ namespace go_around.Interfaces
     Task<List<string>?> GetLocationPlacesCategories(string userId, string locationId);
     Task AddLocationPlacesCategory(string userId, string locationId, string category);
     Task RemoveLocationPlacesCategory(string userId, string locationId, string category);
+    Task SetLocationPlacesCategories(string userId, string locationId, List<string>? categories);
     Task EnableLocationEditMode(string userId, string locationId);
     Task DisableLocationEditMode(string userId, string locationId);
     Task<string?> GetLocationIdWithEditMode(string userId);

@@ -115,7 +115,7 @@ namespace go_around.Services
 
         location.PlacesCategories.Add(category);
 
-        await UpdateSavedLocation(userId, locationId, location);
+        await SetLocationPlacesCategories(userId, locationId, location.PlacesCategories);
       }
     }
 
@@ -126,6 +126,20 @@ namespace go_around.Services
       if (location is not null && location.PlacesCategories is not null)
       {
         location.PlacesCategories.Remove(category);
+
+        await SetLocationPlacesCategories(userId, locationId, location.PlacesCategories);
+      }
+    }
+
+    public async Task SetLocationPlacesCategories(string userId, string locationId, List<string>? categories)
+    {
+      var location = await GetSavedLocation(userId, locationId);
+
+      if (location is not null)
+      {
+        location.PlacesCategories = categories;
+
+        location.PlacesCategories ??= [];
 
         await UpdateSavedLocation(userId, locationId, location);
       }
