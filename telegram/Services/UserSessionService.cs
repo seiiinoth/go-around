@@ -172,7 +172,7 @@ namespace go_around.Services
     {
       try
       {
-        return Enum.Parse<WorkingStage>(await sessionsStoreService.GetSessionAttribute(userId, "WorkingStage"));
+        return Enum.Parse<WorkingStage>(await _sessionsStoreService.GetSessionAttribute(userId, "WorkingStage"));
       }
       catch (Exception)
       {
@@ -183,12 +183,12 @@ namespace go_around.Services
 
     public async Task SetSessionWorkingStage(string userId, WorkingStage workingStage)
     {
-      await sessionsStoreService.SetSessionAttribute(userId, "WorkingStage", workingStage.ToString());
+      await _sessionsStoreService.SetSessionAttribute(userId, "WorkingStage", workingStage.ToString());
     }
 
     public async Task ClearSessionWorkingStage(string userId)
     {
-      await sessionsStoreService.DeleteSessionAttribute(userId, "WorkingStage");
+      await _sessionsStoreService.DeleteSessionAttribute(userId, "WorkingStage");
     }
   }
 }
