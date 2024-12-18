@@ -24,11 +24,16 @@ namespace go_around.Services
       await _db.KeyExpireAsync(userId, _defaultDataTTL);
     }
 
-    public async Task SetSessionAttribute(string userId, string attributeName, string attributeValue)
+    public async Task SetSessionAttribute(string userId, string attributeName, string attributeValue = "")
     {
       var hashFields = new HashEntry[] { new(attributeName, attributeValue) };
       await _db.HashSetAsync(userId, hashFields);
       await _db.KeyExpireAsync(userId, _defaultDataTTL);
+    }
+
+    public async Task<bool> SessionAttributeExists(string userId, string attributeName)
+    {
+      return await _db.HashExistsAsync(userId, attributeName);
     }
 
     public async Task<Dictionary<string, string>?> GetSessionAttributes(string userId)
@@ -59,6 +64,10 @@ namespace go_around.Services
 
     public async Task DeleteSessionAttribute(string userId, string attribute)
     {
+      if (!await SessionAttributeExists(userId, attribute))
+      {
+        return;
+      }
       await _db.HashDeleteAsync(userId, attribute);
       await _db.KeyExpireAsync(userId, _defaultDataTTL);
     }
