@@ -222,7 +222,15 @@ namespace go_around.Services
       if (!string.IsNullOrEmpty(replyMarkupMessageId))
       {
         await _sessionsStoreService.DeleteSessionAttribute(msg.Chat.Id.ToString(), "ReplyKeyboardMarkupMessage");
-        await _bot.DeleteMessage(msg.Chat, int.Parse(replyMarkupMessageId));
+
+        try
+        {
+          await _bot.DeleteMessage(msg.Chat, int.Parse(replyMarkupMessageId));
+        }
+        catch (Exception err)
+        {
+          _logger.LogInformation("Error deleting message with reply keyboard: {err}", err);
+        }
       }
     }
 
