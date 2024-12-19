@@ -6,51 +6,50 @@ namespace go_around.Services
   public class SessionsStoreService : ISessionsStoreService
   {
     private readonly IDatabase _db;
-    private readonly ILogger<HttpCacheService> _logger;
     private readonly TimeSpan _defaultDataTTL = TimeSpan.FromDays(30);
 
-    public SessionsStoreService(IConfiguration configuration, ILogger<HttpCacheService> logger)
+    public SessionsStoreService(IConfiguration configuration)
     {
       var _redis = ConnectionMultiplexer.Connect(configuration.GetConnectionString("RedisStore") ?? throw new InvalidOperationException("Redis store connection string is not configured"));
       _db = _redis.GetDatabase();
+    }
 
-      _logger = logger;
+    private static string GetSessionKey(string userId)
+    {
+      return $"session:{userId}";
     }
 
     public async Task SetSessionAttributes(string userId, Dictionary<string, string> attributes)
     {
       var hashFields = attributes.Select(kv => new HashEntry(kv.Key, kv.Value)).ToArray();
-      await _db.HashSetAsync(userId, hashFields);
-      await _db.KeyExpireAsync(userId, _defaultDataTTL);
+      await _db.HashSetAsync(GetSessionKey(userId), hashFields);
+      await _db.KeyExpireAsync(GetSessionKey(userId), _defaultDataTTL);
     }
 
     public async Task SetSessionAttribute(string userId, string attributeName, string attributeValue = "")
     {
       var hashFields = new HashEntry[] { new(attributeName, attributeValue) };
-      await _db.HashSetAsync(userId, hashFields);
-      await _db.KeyExpireAsync(userId, _defaultDataTTL);
+      await _db.HashSetAsync(GetSessionKey(userId), hashFields);
+      await _db.KeyExpireAsync(GetSessionKey(userId), _defaultDataTTL);
     }
 
     public async Task<bool> SessionAttributeExists(string userId, string attributeName)
     {
-      return await _db.HashExistsAsync(userId, attributeName);
+      return await _db.HashExistsAsync(GetSessionKey(userId), attributeName);
     }
 
     public async Task<Dictionary<string, string>?> GetSessionAttributes(string userId)
     {
-      var hashFields = await _db.HashGetAllAsync(userId);
+      var hashFields = await _db.HashGetAllAsync(GetSessionKey(userId));
       return hashFields.ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
     }
 
     public async Task<string> GetSessionAttribute(string userId, string attributeName)
     {
-      var value = await _db.HashGetAsync(userId, attributeName);
+      var value = await _db.HashGetAsync(GetSessionKey(userId), attributeName);
 
       if (value.IsNull)
-      {
-        _logger.LogWarning("Session attribute {attributeName} not found for user {userId}", attributeName, userId);
         return "";
-      }
 
       return value.ToString();
     }
@@ -58,18 +57,18 @@ namespace go_around.Services
     public async Task DeleteSessionAttributes(string userId, List<string> attributes)
     {
       var hashFields = attributes.Select(attr => new RedisValue(attr)).ToArray();
-      await _db.HashDeleteAsync(userId, hashFields);
-      await _db.KeyExpireAsync(userId, _defaultDataTTL);
+      await _db.HashDeleteAsync(GetSessionKey(userId), hashFields);
+      await _db.KeyExpireAsync(GetSessionKey(userId), _defaultDataTTL);
     }
 
     public async Task DeleteSessionAttribute(string userId, string attribute)
     {
-      if (!await SessionAttributeExists(userId, attribute))
+      if (!await SessionAttributeExists(GetSessionKey(userId), attribute))
       {
         return;
       }
-      await _db.HashDeleteAsync(userId, attribute);
-      await _db.KeyExpireAsync(userId, _defaultDataTTL);
+      await _db.HashDeleteAsync(GetSessionKey(userId), attribute);
+      await _db.KeyExpireAsync(GetSessionKey(userId), _defaultDataTTL);
     }
   }
 }
