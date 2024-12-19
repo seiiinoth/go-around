@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
+using go_around.Models;
 using go_around.Services;
 using go_around.Interfaces;
 using GooglePlaces.Services;

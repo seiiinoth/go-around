@@ -1,9 +1,11 @@
-namespace go_around.Abstract;
-
-/// <summary>
-/// A marker interface for Update Receiver service
-/// </summary>
-public interface IReceiverService
+namespace go_around.Abstract
 {
-  Task ReceiveAsync(CancellationToken stoppingToken);
+  /// <summary>
+  /// A marker interface for Update Receiver service
+  /// </summary>
+  public interface IReceiverService
+  {
+    Task ReceiveAsync(CancellationToken stoppingToken);
+  }
+
 }

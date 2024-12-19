@@ -1,3 +1,4 @@
+using go_around.Interfaces;
 using StackExchange.Redis;
 
 namespace go_around.Services

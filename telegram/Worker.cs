@@ -1,23 +1,19 @@
-namespace go_around;
-
-public class Worker : BackgroundService
+namespace go_around
 {
-    private readonly ILogger<Worker> _logger;
-
-    public Worker(ILogger<Worker> logger)
+    public class Worker(ILogger<Worker> logger) : BackgroundService
     {
-        _logger = logger;
-    }
+        private readonly ILogger<Worker> _logger = logger;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
+            while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                }
+                await Task.Delay(1000, stoppingToken);
             }
-            await Task.Delay(1000, stoppingToken);
         }
     }
 }

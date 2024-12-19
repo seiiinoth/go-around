@@ -1,4 +1,4 @@
-namespace go_around.Services
+namespace go_around.Interfaces
 {
   public interface IHttpCacheService
   {
