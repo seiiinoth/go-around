@@ -57,7 +57,7 @@ namespace go_around.Services
 
     public async Task DeleteSessionAttribute(string userId, string attribute)
     {
-      if (!await SessionAttributeExists(GetSessionKey(userId), attribute))
+      if (!await SessionAttributeExists(userId, attribute))
       {
         return;
       }
