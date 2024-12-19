@@ -47,5 +47,15 @@ namespace go_around.Services
     {
       return await _db.KeyExpireAsync(key, expiry, when, flags);
     }
+
+    public async Task<RedisValue> StringGetAsync(RedisKey key, CommandFlags flags = CommandFlags.None)
+    {
+      return await _db.StringGetAsync(key, flags);
+    }
+
+    public async Task<bool> StringSetAsync(RedisKey key, RedisValue value, TimeSpan? expiry = null, bool keepTtl = false, When when = When.Always, CommandFlags flags = CommandFlags.None)
+    {
+      return await _db.StringSetAsync(key, value, expiry, keepTtl, when, flags);
+    }
   }
 }

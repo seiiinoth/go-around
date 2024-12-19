@@ -32,6 +32,7 @@ IHost host = Host.CreateDefaultBuilder(args)
       services.AddTransient<IStoreService, StoreService>();
       services.AddTransient<IHttpCacheService, HttpCacheService>();
       services.AddTransient<ISessionsStoreService, SessionsStoreService>();
+      services.AddTransient<IPlacesStoreService, PlacesStoreService>();
       services.AddTransient<IUserSessionService, UserSessionService>();
     })
     .Build();
