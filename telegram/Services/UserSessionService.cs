@@ -8,7 +8,7 @@ namespace go_around.Services
   {
     private readonly ISessionsStoreService _sessionsStoreService = sessionsStoreService;
 
-    public async Task<Dictionary<string, LocationQuery>> GetSavedLocations(string userId)
+    public async Task<Dictionary<string, SavedLocation>> GetSavedLocations(string userId)
     {
       var savedLocationsJson = await _sessionsStoreService.GetSessionAttribute(userId, "Locations");
 
@@ -19,7 +19,7 @@ namespace go_around.Services
 
       try
       {
-        return JsonSerializer.Deserialize<Dictionary<string, LocationQuery>>(savedLocationsJson) ?? [];
+        return JsonSerializer.Deserialize<Dictionary<string, SavedLocation>>(savedLocationsJson) ?? [];
       }
       catch (JsonException)
       {
@@ -28,7 +28,7 @@ namespace go_around.Services
       }
     }
 
-    public async Task SetSavedLocations(string userId, Dictionary<string, LocationQuery> locationQueries)
+    public async Task SetSavedLocations(string userId, Dictionary<string, SavedLocation> locationQueries)
     {
       try
       {
@@ -37,21 +37,21 @@ namespace go_around.Services
       }
       catch (JsonException)
       {
-        var fallbackArray = JsonSerializer.Serialize<List<LocationQuery>>([]);
+        var fallbackArray = JsonSerializer.Serialize<List<SavedLocation>>([]);
         await _sessionsStoreService.SetSessionAttribute(userId, "Locations", fallbackArray);
       }
     }
 
-    public async Task<LocationQuery?> GetSavedLocation(string userId, string id)
+    public async Task<SavedLocation?> GetSavedLocation(string userId, string id)
     {
       var savedLocations = await GetSavedLocations(userId);
 
-      savedLocations.TryGetValue(id, out var locationQuery);
+      savedLocations.TryGetValue(id, out var SavedLocation);
 
-      return locationQuery;
+      return SavedLocation;
     }
 
-    public async Task<string> AddSavedLocation(string userId, LocationQuery locationQuery)
+    public async Task<string> AddSavedLocation(string userId, SavedLocation SavedLocation)
     {
       var savedLocations = await GetSavedLocations(userId);
 
@@ -63,18 +63,18 @@ namespace go_around.Services
         uuid = Guid.NewGuid().ToString().Split("-")[0][..7];
       } while (savedLocations.ContainsKey(uuid));
 
-      savedLocations.Add(uuid, locationQuery);
+      savedLocations.Add(uuid, SavedLocation);
 
       await SetSavedLocations(userId, savedLocations);
 
       return uuid;
     }
 
-    public async Task UpdateSavedLocation(string userId, string locationId, LocationQuery locationQuery)
+    public async Task UpdateSavedLocation(string userId, string locationId, SavedLocation SavedLocation)
     {
       var savedLocations = await GetSavedLocations(userId);
 
-      savedLocations[locationId] = locationQuery;
+      savedLocations[locationId] = SavedLocation;
 
       await SetSavedLocations(userId, savedLocations);
     }

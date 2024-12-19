@@ -4,11 +4,11 @@ namespace go_around.Interfaces
 {
   public interface IUserSessionService
   {
-    Task<Dictionary<string, LocationQuery>> GetSavedLocations(string userId);
-    Task SetSavedLocations(string userId, Dictionary<string, LocationQuery> locationQueries);
-    Task<LocationQuery?> GetSavedLocation(string userId, string id);
-    Task<string> AddSavedLocation(string userId, LocationQuery locationQuery);
-    Task UpdateSavedLocation(string userId, string locationId, LocationQuery locationQuery);
+    Task<Dictionary<string, SavedLocation>> GetSavedLocations(string userId);
+    Task SetSavedLocations(string userId, Dictionary<string, SavedLocation> locationQueries);
+    Task<SavedLocation?> GetSavedLocation(string userId, string id);
+    Task<string> AddSavedLocation(string userId, SavedLocation SavedLocation);
+    Task UpdateSavedLocation(string userId, string locationId, SavedLocation SavedLocation);
     Task<bool> RemoveSavedLocation(string userId, string id);
     Task ClearSavedLocations(string userId);
     Task<List<string>?> GetLocationPlacesCategories(string userId, string locationId);

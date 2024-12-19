@@ -79,7 +79,7 @@ namespace go_around.Services
       await _sessionsStoreService.DeleteSessionAttribute(msg.Chat.Id.ToString(), "ReplyKeyboardMarkupMessage");
       await _userSessionService.ClearSessionWorkingStage(msg.Chat.Id.ToString());
 
-      var location = new LocationQuery { };
+      var location = new SavedLocation { };
 
       if (msg.Location is not null)
       {
@@ -351,12 +351,12 @@ namespace go_around.Services
 
     async Task<Message> EditLocation(Message msg, string locationId, string locationField)
     {
-      return await (Enum.Parse<LocationQueryField>(locationField) switch
+      return await (Enum.Parse<SavedLocationField>(locationField) switch
       {
-        LocationQueryField.LatLng => SendLocationRequest(msg),
-        LocationQueryField.TextQuery => SendLocationRequest(msg),
-        LocationQueryField.Radius => SendLocationRadiusRequest(msg, locationId),
-        LocationQueryField.PlacesCategories => SendLocationPlacesTypesRequest(msg, locationId),
+        SavedLocationField.LatLng => SendLocationRequest(msg),
+        SavedLocationField.TextQuery => SendLocationRequest(msg),
+        SavedLocationField.Radius => SendLocationRadiusRequest(msg, locationId),
+        SavedLocationField.PlacesCategories => SendLocationPlacesTypesRequest(msg, locationId),
         _ => throw new NotImplementedException(),
       });
     }

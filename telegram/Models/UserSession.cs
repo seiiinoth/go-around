@@ -2,7 +2,7 @@ using GooglePlaces.Models;
 
 namespace go_around.Models
 {
-  public class LocationQuery
+  public class SavedLocation
   {
     public LatLng? LatLng { get; set; }
     public string? TextQuery { get; set; }
@@ -13,7 +13,7 @@ namespace go_around.Models
     public List<Place> Places { get; set; } = [];
   }
 
-  public enum LocationQueryField
+  public enum SavedLocationField
   {
     LatLng,
     TextQuery,
