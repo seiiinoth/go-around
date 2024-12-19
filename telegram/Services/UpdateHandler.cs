@@ -12,11 +12,12 @@ using System.Text;
 
 namespace go_around.Services
 {
-  public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService) : IUpdateHandler
+  public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService) : IUpdateHandler
   {
     private readonly ITelegramBotClient _bot = bot;
     private readonly ILogger<UpdateHandler> _logger = logger;
     private readonly ISessionsStoreService _sessionsStoreService = sessionsStoreService;
+    private readonly IPlacesStoreService _placesStoreService = placesStoreService;
     private readonly IUserSessionService _userSessionService = userSessionService;
     private readonly IGooglePlacesService _googlePlacesService = googlePlacesService;
 
@@ -447,18 +448,18 @@ namespace go_around.Services
       }
       else
       {
-        placeId ??= location.Places.First().Id;
+        placeId ??= location.Places.First();
       }
 
       _logger.LogInformation("{place}", placeId);
 
       if (placeId is not null)
       {
-        var place = location.Places.FirstOrDefault(p => p.Id == placeId);
+        var place = await _placesStoreService.GetPlace(placeId);
 
         if (place is not null)
         {
-          var placeListIndex = location.Places.IndexOf(place);
+          var placeListIndex = location.Places.IndexOf(placeId);
 
           // {place.Photos?.First().GoogleMapsUri!}
 
@@ -497,13 +498,13 @@ namespace go_around.Services
 
           if (placeListIndex != 0)
           {
-            var prevPlaceIndex = location.Places.IndexOf(place) - 1;
-            inlineMarkup.AddButton("« Previous place", $"LocInf {locationId} {location.Places[prevPlaceIndex].Id}");
+            var prevPlaceIndex = location.Places.IndexOf(placeId) - 1;
+            inlineMarkup.AddButton("« Previous place", $"LocInf {locationId} {location.Places[prevPlaceIndex]}");
           }
           if (placeListIndex < (location.Places.Count - 1))
           {
-            var nextPlaceIndex = location.Places.IndexOf(place) + 1;
-            inlineMarkup.AddButton("Next place »", $"LocInf {locationId} {location.Places[nextPlaceIndex].Id}");
+            var nextPlaceIndex = location.Places.IndexOf(placeId) + 1;
+            inlineMarkup.AddButton("Next place »", $"LocInf {locationId} {location.Places[nextPlaceIndex]}");
           }
 
           inlineMarkup.AddNewRow().AddButton("Back to locations list", $"ToLocationsList");
@@ -612,7 +613,12 @@ namespace go_around.Services
 
           var searchResult = await _googlePlacesService.SearchNearbyAsync(searchNearbyQueryInput);
 
-          location.Places = searchResult.Places;
+          searchResult.Places.ToList().ForEach(async place =>
+          {
+            await _placesStoreService.SavePlace(place);
+          });
+
+          location.Places = searchResult.Places.Select(place => place.Id).ToList();
         }
 
         await _userSessionService.UpdateSavedLocation(msg.Chat.Id.ToString(), locationId, location!);

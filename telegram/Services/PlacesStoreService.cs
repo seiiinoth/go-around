@@ -26,11 +26,11 @@ namespace go_around.Services
       return JsonSerializer.Deserialize<Place>(placeJson!) ?? null;
     }
 
-    public async Task SetPlace(string id, Place place)
+    public async Task SavePlace(Place place)
     {
       var placeJson = JsonSerializer.Serialize(place);
 
-      await _storeService.StringSetAsync(GetPlaceKey(id), placeJson);
+      await _storeService.StringSetAsync(GetPlaceKey(place.Id), placeJson);
     }
   }
 }

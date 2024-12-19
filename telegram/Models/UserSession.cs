@@ -10,7 +10,7 @@ namespace go_around.Models
     public List<string>? PlacesCategories { get; set; }
     public string? Title { get; set; }
     public bool EditMode { get; set; }
-    public List<Place> Places { get; set; } = [];
+    public List<string> Places { get; set; } = [];
   }
 
   public enum SavedLocationField
