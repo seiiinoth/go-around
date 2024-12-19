@@ -57,7 +57,7 @@ namespace GooglePlaces.Models
   public class Circle
   {
     public required LatLng Center { get; set; }
-    public decimal Radius { get; set; }
+    public uint Radius { get; set; }
   }
 
   public class LatLng

@@ -6,10 +6,11 @@ namespace go_around.Models
   {
     public LatLng? LatLng { get; set; }
     public string? TextQuery { get; set; }
-    public uint? Radius { get; set; }
+    public uint Radius { get; set; }
     public List<string>? PlacesCategories { get; set; }
     public string? Title { get; set; }
     public bool EditMode { get; set; }
+    public List<Place> Places { get; set; } = [];
   }
 
   public enum LocationQueryField
