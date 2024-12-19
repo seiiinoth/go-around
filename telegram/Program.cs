@@ -29,6 +29,7 @@ IHost host = Host.CreateDefaultBuilder(args)
 
       services.AddTransient<IGooglePlacesService, GooglePlacesService>();
 
+      services.AddTransient<IStoreService, StoreService>();
       services.AddTransient<IHttpCacheService, HttpCacheService>();
       services.AddTransient<ISessionsStoreService, SessionsStoreService>();
       services.AddTransient<IUserSessionService, UserSessionService>();
