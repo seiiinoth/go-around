@@ -174,9 +174,16 @@ namespace go_around.Services
 
         if (msg.From?.IsBot == true)
         {
-          return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationsNotFoundMessage, replyMarkup: backToMenuButton);
+          try
+          {
+            return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationsNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: backToMenuButton);
+          }
+          catch (Exception)
+          {
+            await _bot.DeleteMessage(msg.Chat, msg.Id);
+          }
         }
-        return await _bot.SendMessage(msg.Chat, locationsNotFoundMessage, replyMarkup: backToMenuButton);
+        return await _bot.SendMessage(msg.Chat, locationsNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: backToMenuButton);
       }
 
       const string listLocationsMessage = "Your saved locations:";
@@ -210,7 +217,14 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, listLocationsMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, listLocationsMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
       return await _bot.SendMessage(msg.Chat, listLocationsMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
@@ -253,7 +267,14 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, requestUserLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, requestUserLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
       return await _bot.SendMessage(msg.Chat, requestUserLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
@@ -353,7 +374,14 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationTypesRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationTypesRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
       return await _bot.SendMessage(msg.Chat, locationTypesRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
@@ -406,9 +434,15 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
-
       return await _bot.SendMessage(msg.Chat, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
@@ -425,9 +459,16 @@ namespace go_around.Services
 
         if (msg.From?.IsBot == true)
         {
-          return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
+          try
+          {
+            return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
+          }
+          catch (Exception)
+          {
+            await _bot.DeleteMessage(msg.Chat, msg.Id);
+          }
         }
-        return await _bot.SendMessage(msg.Chat, locationNotFoundMessage, replyMarkup: locationNotFoundButtonsMarkup);
+        return await _bot.SendMessage(msg.Chat, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
       }
 
       location.Title ??= $"Unknown location";
@@ -489,7 +530,14 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
       return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
@@ -501,15 +549,22 @@ namespace go_around.Services
 
       if (location is null)
       {
-        const string locationNotFoundMessage = "Location not found";
-        var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup()
-                                                .AddButton("Back to locations list", $"ToLocationsList");
+        const string placeNotFoundMessage = "Location not found";
+        var placeNotFoundButtonsMarkup = new InlineKeyboardMarkup()
+                                                .AddButton("Back to location info", $"LocInf {locationId}");
 
         if (msg.From?.IsBot == true)
         {
-          return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
+          try
+          {
+            return await _bot.EditMessageText(msg.Chat, msg.MessageId, placeNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: placeNotFoundButtonsMarkup);
+          }
+          catch (Exception)
+          {
+            await _bot.DeleteMessage(msg.Chat, msg.Id);
+          }
         }
-        return await _bot.SendMessage(msg.Chat, locationNotFoundMessage, replyMarkup: locationNotFoundButtonsMarkup);
+        return await _bot.SendMessage(msg.Chat, placeNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: placeNotFoundButtonsMarkup);
       }
 
       string placeInfo = "";
@@ -584,7 +639,14 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
       return await _bot.SendMessage(msg.Chat, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
