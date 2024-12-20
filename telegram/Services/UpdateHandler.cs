@@ -471,16 +471,42 @@ namespace go_around.Services
         return await _bot.SendMessage(msg.Chat, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
       }
 
-      location.Title ??= $"Unknown location";
+      var builder = new StringBuilder();
 
-      string locationInfo = $"""
-        {location.Title}
+      builder.AppendLine(location.Title ?? $"Unknown location");
+      builder.AppendLine("");
 
-        Longitude: {location.LatLng?.Longitude}
-        Latitude: {location.LatLng?.Latitude}
+      if (location.LatLng is not null)
+      {
+        builder.AppendLine($"Longitude: {location.LatLng.Longitude}");
+        builder.AppendLine($"Latitude: {location.LatLng.Latitude}");
+        builder.AppendLine("");
+      }
 
-        Radius: {location.Radius}m
-        """;
+      if (location.Radius > 0)
+      {
+        builder.AppendLine($"Radius: {location.Radius}");
+        builder.AppendLine("");
+      }
+
+      if (location.PlacesCategories?.Count > 0)
+      {
+        builder.Append($"Selected categories: ");
+
+        location.PlacesCategories?.ToList().ForEach(category =>
+        {
+          builder.Append($"{category}");
+
+          if (category != location.PlacesCategories.Last())
+          {
+            builder.Append(", ");
+          }
+        });
+
+        builder.AppendLine("");
+      }
+
+      var locationInfo = builder.ToString();
 
       var inlineMarkup = new InlineKeyboardMarkup();
 
