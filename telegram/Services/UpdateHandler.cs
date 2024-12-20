@@ -412,7 +412,7 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> SendLocationInfo(Message msg, string locationId, string? placeId = null)
+    async Task<Message> SendLocationInfo(Message msg, string locationId)
     {
       await RemoveMessageWithReplyKeyboard(msg);
       var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
@@ -430,14 +430,9 @@ namespace go_around.Services
         return await _bot.SendMessage(msg.Chat, locationNotFoundMessage, replyMarkup: locationNotFoundButtonsMarkup);
       }
 
-      string message = "";
-      var inlineMarkup = new InlineKeyboardMarkup();
+      location.Title ??= $"Unknown location";
 
-      if (location.Places.Count == 0)
-      {
-        location.Title ??= $"Unknown location";
-
-        message = $"""
+      string locationInfo = $"""
         {location.Title}
 
         Longitude: {location.LatLng?.Longitude}
@@ -446,95 +441,30 @@ namespace go_around.Services
         Radius: {location.Radius}m
         """;
 
+      var inlineMarkup = new InlineKeyboardMarkup();
+
+      if (location.Places.Count == 0)
+      {
         inlineMarkup.AddButton("GoAround!", $"GoAroundLocation {locationId}")
-                      // .AddNewRow()
-                      // .AddButton("Edit", $"EditLocation {locationId}")
-                      .AddNewRow()
-                      .AddButton("Remove", $"RemoveLocation {locationId}")
-                      .AddNewRow()
-                      .AddButton("Back to locations list", $"ToLocationsList");
+                    .AddNewRow();
       }
       else
       {
-        placeId ??= location.Places.First();
+        inlineMarkup.AddButton($"Get places ({location.Places.Count})", $"PlaceInf {locationId} {location.Places.First()}")
+                    .AddNewRow();
       }
 
-      _logger.LogInformation("{place}", placeId);
-
-      if (placeId is not null)
-      {
-        var place = await _placesStoreService.GetPlace(placeId);
-
-        if (place is not null)
-        {
-          var placeListIndex = location.Places.IndexOf(placeId);
-
-          // {place.Photos?.First().GoogleMapsUri!}
-
-          var builder = new StringBuilder();
-
-          if (!string.IsNullOrEmpty(place.DisplayName?.Text))
-          {
-            builder.AppendLine(place.DisplayName.Text);
-            builder.AppendLine("");
-          }
-
-          if (place.Rating.HasValue)
-          {
-            builder.AppendLine($"Rating: {place.Rating?.ToString("0.0⭐️")}");
-            builder.AppendLine("");
-          }
-
-          if (!string.IsNullOrEmpty(place.FormattedAddress))
-          {
-            builder.AppendLine($"Address: {place.FormattedAddress}");
-            builder.AppendLine("");
-          }
-
-          if (!string.IsNullOrEmpty(place.GoogleMapsLinks?.ReviewsUri))
-          {
-            builder.AppendLine($"<a href=\"{place.GoogleMapsLinks.ReviewsUri}\">Reviews</a>");
-            builder.AppendLine("");
-          }
-
-          if (!string.IsNullOrEmpty(place.GoogleMapsUri))
-          {
-            builder.AppendLine(place.GoogleMapsUri);
-          }
-
-          message = builder.ToString();
-
-          if (placeListIndex != 0)
-          {
-            var prevPlaceIndex = location.Places.IndexOf(placeId) - 1;
-            inlineMarkup.AddButton("« Previous place", $"LocInf {locationId} {location.Places[prevPlaceIndex]}");
-          }
-          if (placeListIndex < (location.Places.Count - 1))
-          {
-            var nextPlaceIndex = location.Places.IndexOf(placeId) + 1;
-            inlineMarkup.AddButton("Next place »", $"LocInf {locationId} {location.Places[nextPlaceIndex]}");
-          }
-
-          inlineMarkup.AddNewRow().AddButton("Back to locations list", $"ToLocationsList");
-
-          var mediaPhoto = new InputMediaPhoto("https://placehold.co/400x400?text=No+Image");
-
-          if (place.Photos is not null && place.Photos?.Count > 0)
-          {
-            mediaPhoto = new InputMediaPhoto(place.Photos?.First().GoogleMapsUri!);
-          }
-
-          return await _bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
-          // return await _bot.EditMessageMedia(msg.Chat, msg.MessageId, mediaPhoto, replyMarkup: inlineMarkup);
-          // return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
-        }
-      }
+      inlineMarkup.AddButton("Remove", $"RemoveLocation {locationId}")
+                  // .AddNewRow()
+                  // .AddButton("Edit", $"EditLocation {locationId}")
+                  .AddNewRow()
+                  .AddButton("Back to locations list", $"ToLocationsList");
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
       }
-      return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+      return await _bot.SendMessage(msg.Chat, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
     async Task<Message> RemoveSavedLocation(Message msg, string locationId)
@@ -555,6 +485,101 @@ namespace go_around.Services
         return await _bot.EditMessageText(msg.Chat, msg.MessageId, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
       }
       return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+
+    async Task<Message> SendPlaceInfo(Message msg, string locationId, string placeId)
+    {
+      await RemoveMessageWithReplyKeyboard(msg);
+      var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
+
+      if (location is null)
+      {
+        const string locationNotFoundMessage = "Location not found";
+        var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup()
+                                                .AddButton("Back to locations list", $"ToLocationsList");
+
+        if (msg.From?.IsBot == true)
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: locationNotFoundButtonsMarkup);
+        }
+        return await _bot.SendMessage(msg.Chat, locationNotFoundMessage, replyMarkup: locationNotFoundButtonsMarkup);
+      }
+
+      string placeInfo = "";
+      var inlineMarkup = new InlineKeyboardMarkup();
+
+      if (!location.Places.Contains(placeId))
+        placeId = location.Places.First();
+
+      var place = await _placesStoreService.GetPlace(placeId);
+
+      if (place is not null)
+      {
+        var placeListIndex = location.Places.IndexOf(placeId);
+
+        var builder = new StringBuilder();
+
+        if (!string.IsNullOrEmpty(place.DisplayName?.Text))
+        {
+          builder.AppendLine(place.DisplayName.Text);
+          builder.AppendLine("");
+        }
+
+        if (place.Rating.HasValue)
+        {
+          builder.AppendLine($"Rating: {place.Rating?.ToString("0.0⭐️")}");
+          builder.AppendLine("");
+        }
+
+        if (!string.IsNullOrEmpty(place.FormattedAddress))
+        {
+          builder.AppendLine($"Address: {place.FormattedAddress}");
+          builder.AppendLine("");
+        }
+
+        if (!string.IsNullOrEmpty(place.GoogleMapsLinks?.ReviewsUri))
+        {
+          builder.AppendLine($"<a href=\"{place.GoogleMapsLinks.ReviewsUri}\">Reviews</a>");
+          builder.AppendLine("");
+        }
+
+        if (!string.IsNullOrEmpty(place.GoogleMapsUri))
+        {
+          builder.AppendLine(place.GoogleMapsUri);
+        }
+
+        placeInfo = builder.ToString();
+
+        if (placeListIndex != 0)
+        {
+          var prevPlaceIndex = location.Places.IndexOf(placeId) - 1;
+          inlineMarkup.AddButton("« Previous place", $"PlaceInf {locationId} {location.Places[prevPlaceIndex]}");
+        }
+        if (placeListIndex < (location.Places.Count - 1))
+        {
+          var nextPlaceIndex = location.Places.IndexOf(placeId) + 1;
+          inlineMarkup.AddButton("Next place »", $"PlaceInf {locationId} {location.Places[nextPlaceIndex]}");
+        }
+
+        inlineMarkup.AddNewRow().AddButton("Back", $"LocInf {locationId}");
+
+        var mediaPhoto = new InputMediaPhoto("https://placehold.co/400x400?text=No+Image");
+
+        if (place.Photos is not null && place.Photos?.Count > 0)
+        {
+          mediaPhoto = new InputMediaPhoto(place.Photos?.First().GoogleMapsUri!);
+        }
+
+        return await _bot.EditMessageText(msg.Chat, msg.MessageId, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        // return await _bot.EditMessageMedia(msg.Chat, msg.MessageId, mediaPhoto, replyMarkup: inlineMarkup);
+        // return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+      }
+
+      if (msg.From?.IsBot == true)
+      {
+        return await _bot.EditMessageText(msg.Chat, msg.MessageId, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+      }
+      return await _bot.SendMessage(msg.Chat, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
     async Task<Message> GoAroundLocation(Message msg, string locationId)
@@ -653,7 +678,8 @@ namespace go_around.Services
         "EnterOrSendLocation" => SendLocationRequest(msg),
         "GoAroundLocation" => GoAroundLocation(msg, args?[1] ?? "0"),
         // "EditLocation" => EditLocation(msg, args?[1] ?? "0", args?[2] ?? "0"),
-        "LocInf" => SendLocationInfo(msg, args?[1] ?? "0", args?.ElementAtOrDefault(2)),
+        "LocInf" => SendLocationInfo(msg, args?[1] ?? "0"),
+        "PlaceInf" => SendPlaceInfo(msg, args?[1] ?? "0", args?[2] ?? "0"),
         "ConfirmPlacesCategories" => ConfirmLocationPlacesCategories(msg, args?[1] ?? "0"),
         "RemoveLocation" => RemoveSavedLocation(msg, args?[1] ?? "0"),
         "SelLocPlcCat" => SelectLocationPlacesCategory(msg, args?[1] ?? "0", callbackQuery.Data?.Split(' ')[2] ?? "0"),
