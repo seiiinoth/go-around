@@ -462,7 +462,14 @@ namespace go_around.Services
 
       if (msg.From?.IsBot == true)
       {
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        try
+        {
+          return await _bot.EditMessageText(msg.Chat, msg.MessageId, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        }
+        catch (Exception)
+        {
+          await _bot.DeleteMessage(msg.Chat, msg.Id);
+        }
       }
       return await _bot.SendMessage(msg.Chat, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
@@ -519,6 +526,13 @@ namespace go_around.Services
 
         var builder = new StringBuilder();
 
+        var mediaPhoto = new InputMediaPhoto("https://placehold.co/400x400?text=No+Image");
+
+        if (place.Photos is not null && place.Photos?.Count > 0)
+        {
+          mediaPhoto = new InputMediaPhoto(place.Photos?.First().GoogleMapsUri!);
+        }
+
         if (!string.IsNullOrEmpty(place.DisplayName?.Text))
         {
           builder.AppendLine(place.DisplayName.Text);
@@ -539,13 +553,14 @@ namespace go_around.Services
 
         if (!string.IsNullOrEmpty(place.GoogleMapsLinks?.ReviewsUri))
         {
-          builder.AppendLine($"<a href=\"{place.GoogleMapsLinks.ReviewsUri}\">Reviews</a>");
-          builder.AppendLine("");
+          inlineMarkup.AddButton(InlineKeyboardButton.WithUrl("Reviews", place.GoogleMapsLinks.ReviewsUri))
+                      .AddNewRow();
         }
 
         if (!string.IsNullOrEmpty(place.GoogleMapsUri))
         {
-          builder.AppendLine(place.GoogleMapsUri);
+          inlineMarkup.AddButton(InlineKeyboardButton.WithUrl("Google Maps URI", place.GoogleMapsUri))
+                      .AddNewRow();
         }
 
         placeInfo = builder.ToString();
@@ -563,16 +578,8 @@ namespace go_around.Services
 
         inlineMarkup.AddNewRow().AddButton("Back", $"LocInf {locationId}");
 
-        var mediaPhoto = new InputMediaPhoto("https://placehold.co/400x400?text=No+Image");
-
-        if (place.Photos is not null && place.Photos?.Count > 0)
-        {
-          mediaPhoto = new InputMediaPhoto(place.Photos?.First().GoogleMapsUri!);
-        }
-
-        return await _bot.EditMessageText(msg.Chat, msg.MessageId, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
-        // return await _bot.EditMessageMedia(msg.Chat, msg.MessageId, mediaPhoto, replyMarkup: inlineMarkup);
-        // return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+        await _bot.EditMessageMedia(msg.Chat, msg.MessageId, mediaPhoto);
+        return await _bot.EditMessageCaption(msg.Chat, msg.MessageId, placeInfo, replyMarkup: inlineMarkup);
       }
 
       if (msg.From?.IsBot == true)
