@@ -11,7 +11,7 @@ namespace go_around.Services
 
     private static string GetPlaceKey(string id)
     {
-      return $"place:{id}";
+      return $"places:{id}";
     }
 
     public async Task<Place?> GetPlace(string id)

@@ -10,7 +10,7 @@ namespace go_around.Services
 
     private static string GetSessionKey(string userId)
     {
-      return $"session:{userId}";
+      return $"sessions:{userId}";
     }
 
     public async Task SetSessionAttributes(string userId, Dictionary<string, string> attributes)
