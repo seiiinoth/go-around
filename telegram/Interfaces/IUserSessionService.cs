@@ -21,5 +21,7 @@ namespace go_around.Interfaces
     Task<WorkingStage?> GetSessionWorkingStage(string userId);
     Task SetSessionWorkingStage(string userId, WorkingStage workingStage);
     Task ClearSessionWorkingStage(string userId);
+    Task<Language> GetSessionLanguage(string userId);
+    Task SetSessionLanguage(string userId, Language language);
   }
 }

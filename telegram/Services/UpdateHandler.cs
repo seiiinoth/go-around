@@ -70,10 +70,39 @@ namespace go_around.Services
       {
         "/start" => SendMenu(msg),
         "/locations" => ListLocations(msg),
+        "/language" => SendLanguageSelector(msg),
         _ => Usage(msg)
       });
 
       _logger.LogInformation("The message was sent with id: {SentMessageId}", sentMessage.Id);
+    }
+
+    async Task<Message> SendLanguageSelector(Message msg)
+    {
+      await RemoveMessageWithReplyKeyboard(msg);
+
+      const string selectLanguageMessage = "Select interface language";
+
+      var inlineMarkup = new InlineKeyboardMarkup();
+
+      foreach (Language language in Enum.GetValues<Language>())
+      {
+        inlineMarkup.AddButton(language.ToString(), $"SetLang {language}");
+        inlineMarkup.AddNewRow();
+      }
+
+      return await _bot.SendMessage(msg.Chat, selectLanguageMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+
+    async Task<Message> SetLanguageHandler(Message msg, string language)
+    {
+      await RemoveMessageWithReplyKeyboard(msg);
+
+      await _userSessionService.SetSessionLanguage(msg.Chat.Id.ToString(), Enum.Parse<Language>(language));
+
+      const string changeLanguageMessage = "👍";
+
+      return await _bot.SendMessage(msg.Chat, changeLanguageMessage, parseMode: ParseMode.Html);
     }
 
     async Task<Message> EnterLocationHandler(Message msg)
@@ -200,6 +229,7 @@ namespace go_around.Services
             <b><u>Bot menu</u></b>:
             /start - Start bot
             /locations - List saved locations
+            /language - Select interface language
             """;
       return await _bot.SendMessage(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
     }
@@ -850,6 +880,7 @@ namespace go_around.Services
         "RemoveLocation" => RemoveSavedLocation(msg, args?[1] ?? "0"),
         "SelLocPlcCat" => SelectLocationPlacesCategory(msg, args?[1] ?? "0", callbackQuery.Data?.Split(' ')[2] ?? "0"),
         "ToLocationsList" => ListLocations(msg),
+        "SetLang" => SetLanguageHandler(msg, args?[1] ?? "0"),
         _ => Usage(msg)
       });
     }

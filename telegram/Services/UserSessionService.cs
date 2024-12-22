@@ -204,5 +204,22 @@ namespace go_around.Services
     {
       await _sessionsStoreService.DeleteSessionAttribute(userId, "WorkingStage");
     }
+
+    public async Task<Language> GetSessionLanguage(string userId)
+    {
+      try
+      {
+        return Enum.Parse<Language>(await _sessionsStoreService.GetSessionAttribute(userId, "Language"));
+      }
+      catch (Exception)
+      {
+        return Language.UKRAINIAN;
+      }
+    }
+
+    public async Task SetSessionLanguage(string userId, Language language)
+    {
+      await _sessionsStoreService.SetSessionAttribute(userId, "Language", language.ToString());
+    }
   }
 }

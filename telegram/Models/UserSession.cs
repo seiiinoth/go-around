@@ -28,4 +28,10 @@ namespace go_around.Models
     ENTER_PLACES_CATEGORIES,
     ENTER_TEXT_QUERY
   }
+
+  public enum Language
+  {
+    UKRAINIAN,
+    ENGLISH,
+  }
 }
