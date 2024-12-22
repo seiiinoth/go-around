@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
 
 namespace go_around.Abstract
 {
@@ -41,6 +42,19 @@ namespace go_around.Abstract
 
       var me = await _botClient.GetMeAsync(stoppingToken);
       _logger.LogInformation("Start receiving updates for {BotName}", me.Username ?? "My Awesome Bot");
+
+      BotCommand[] botCommands = [
+        new BotCommand { Command = "start", Description = "Start the bot" },
+        new BotCommand { Command = "locations", Description = "List saved locations" },
+        new BotCommand { Command = "language", Description = "Set interface language" }
+      ];
+
+      var currentBotCommands = await _botClient.GetMyCommandsAsync(cancellationToken: stoppingToken);
+
+      if (currentBotCommands != botCommands)
+      {
+        await _botClient.SetMyCommandsAsync(botCommands, cancellationToken: stoppingToken);
+      }
 
       // Start receiving updates
       await _botClient.ReceiveAsync(
