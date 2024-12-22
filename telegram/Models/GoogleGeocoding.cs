@@ -77,4 +77,19 @@ namespace GoogleGeocoding.Models
     GEOMETRIC_CENTER,
     APPROXIMATE
   }
+
+  public class GetAddressLookupQueryInput
+  {
+    public required Location Latlng { get; set; }
+    public string? Language { get; set; }
+    public string? Region { get; set; }
+    public List<ExtraComputations>? ExtraComputations { get; set; }
+  }
+
+  public class GetAddressLookupQueryOutput
+  {
+    public List<GeocodingResult> Results { get; set; } = [];
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public GeocodingStatus Status { get; set; }
+  }
 }

@@ -53,5 +53,49 @@ namespace GoogleGeocoding.Services
         throw;
       }
     }
+
+    public async Task<GetAddressLookupQueryOutput> GetAddressLookupAsync(GetAddressLookupQueryInput getAddressLookupQueryInput)
+    {
+      var baseUri = "https://maps.googleapis.com/maps/api/geocode/json";
+
+      var query = HttpUtility.ParseQueryString(string.Empty);
+
+      query["key"] = _apiKey;
+      query["latlng"] = $"{getAddressLookupQueryInput.Latlng.Lat},{getAddressLookupQueryInput.Latlng.Lng}";
+
+      if (getAddressLookupQueryInput.Language is not null)
+      {
+        query["language"] = getAddressLookupQueryInput.Language;
+      }
+
+      // getAddressLookupQueryInput.ExtraComputations?.ForEach(extraComputation =>
+      // {
+      //   queryParams.Add("extra_computations", extraComputation.ToString());
+      // });
+
+      var apiUri = string.Join("?", baseUri, query.ToString());
+
+      var httpRequest = new HttpRequestMessage(HttpMethod.Get, apiUri);
+      httpRequest.Headers.Add("X-Goog-Api-Key", _apiKey);
+
+      try
+      {
+        var request = await _httpClient.SendAsync(httpRequest);
+
+        if (request.IsSuccessStatusCode)
+        {
+          return await request.Content.ReadFromJsonAsync<GetAddressLookupQueryOutput>() ?? throw new HttpRequestException("Error: Received null data from Google Geocoding API");
+        }
+        else
+        {
+          string msg = await request.Content.ReadAsStringAsync();
+          throw new HttpRequestException($"Error fetching data from Google Geocoding API: {msg}");
+        }
+      }
+      catch (Exception)
+      {
+        throw;
+      }
+    }
   }
 }
