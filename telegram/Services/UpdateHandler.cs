@@ -1,3 +1,4 @@
+using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -7,12 +8,13 @@ using Telegram.Bot.Types.ReplyMarkups;
 using go_around.Models;
 using go_around.Interfaces;
 using GooglePlaces.Models;
-using GooglePlaces.Services;
-using System.Text;
+using GooglePlaces.Interfaces;
+using GoogleGeocoding.Models;
+using GoogleGeocoding.Interfaces;
 
 namespace go_around.Services
 {
-  public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService) : IUpdateHandler
+  public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService, IGoogleGeocodingService googleGeocodingService) : IUpdateHandler
   {
     private readonly ITelegramBotClient _bot = bot;
     private readonly ILogger<UpdateHandler> _logger = logger;
@@ -20,6 +22,7 @@ namespace go_around.Services
     private readonly IPlacesStoreService _placesStoreService = placesStoreService;
     private readonly IUserSessionService _userSessionService = userSessionService;
     private readonly IGooglePlacesService _googlePlacesService = googlePlacesService;
+    private readonly IGoogleGeocodingService _googleGeocodingService = googleGeocodingService;
 
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
@@ -63,8 +66,6 @@ namespace go_around.Services
       if (msg.Text is not { } messageText)
         return;
 
-      await _sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "WorkingStage", "Initial");
-
       Message sentMessage = await (messageText.Split(' ')[0] switch
       {
         "/start" => SendMenu(msg),
@@ -96,6 +97,33 @@ namespace go_around.Services
       {
         const string errorMessage = "Please, provide your correct location to find places near you";
         return await _bot.SendMessage(msg.Chat, errorMessage, parseMode: ParseMode.Html);
+      }
+
+      if (location.TextQuery is not null && location.LatLng is null)
+      {
+        GetAddressGeocodingQueryInput getAddressGeocodingQueryInput = new()
+        {
+          Address = location.TextQuery,
+        };
+
+        var searchResult = await _googleGeocodingService.GetAddressGeocodingAsync(getAddressGeocodingQueryInput);
+
+        if (searchResult.Results.Count > 1)
+        {
+          var locations = searchResult.Results.Where(result => result.Formatted_Address != null).Select(result => result.Formatted_Address!);
+          return await SendTextLocationsSelect(msg, locations.ToList());
+        }
+
+        if (searchResult.Results.Count > 0)
+        {
+          location.LatLng = new LatLng()
+          {
+            Latitude = searchResult.Results.First().Geometry?.Location?.Lat ?? 0,
+            Longitude = searchResult.Results.First().Geometry?.Location?.Lng ?? 0,
+          };
+
+          location.Title = searchResult.Results.First().Formatted_Address;
+        }
       }
 
       var locationId = await _userSessionService.AddSavedLocation(msg.Chat.Id.ToString(), location);
@@ -283,12 +311,33 @@ namespace go_around.Services
     {
       await _userSessionService.SetSessionWorkingStage(msg.Chat.Id.ToString(), WorkingStage.ENTER_LOCATION);
 
-      const string requestLocationMessage = "Provide your location to find places near you";
-
       var replyMarkup = new ReplyKeyboardMarkup(true)
                             .AddButton(KeyboardButton.WithRequestLocation("Location"));
 
+      const string requestLocationMessage = "Provide your location to find places near you";
+
       var message = await _bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
+
+      await _sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "ReplyKeyboardMarkupMessage", message.Id.ToString());
+
+      return message;
+    }
+
+    async Task<Message> SendTextLocationsSelect(Message msg, List<string> locations)
+    {
+      await _userSessionService.SetSessionWorkingStage(msg.Chat.Id.ToString(), WorkingStage.ENTER_LOCATION);
+
+      var replyMarkup = new ReplyKeyboardMarkup(true);
+
+      locations.ForEach(location =>
+      {
+        replyMarkup.AddButton(location);
+        replyMarkup.AddNewRow();
+      });
+
+      const string textLocationSelectMessage = "Select the appropriate option";
+
+      var message = await _bot.SendMessage(msg.Chat, textLocationSelectMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
 
       await _sessionsStoreService.SetSessionAttribute(msg.Chat.Id.ToString(), "ReplyKeyboardMarkupMessage", message.Id.ToString());
 
@@ -301,11 +350,11 @@ namespace go_around.Services
       await _userSessionService.EnableLocationEditMode(msg.Chat.Id.ToString(), locationId);
 
       string locationRadiusRequestMessage = $"""
-    Specify the radius in meters around which the search will be performed.
-    The value must be specified as an integer, without periods or commas.
+      Specify the radius in meters around which the search will be performed.
+      The value must be specified as an integer, without periods or commas.
 
-    <b>Example:</b> {new Random().Next(200, 5000)}
-    """;
+      <b>Example:</b> {new Random().Next(200, 5000)}
+      """;
 
       var inlineMarkup = new ReplyKeyboardMarkup(true)
                             .AddButtons("500", "1000")
@@ -480,6 +529,12 @@ namespace go_around.Services
       {
         builder.AppendLine($"Longitude: {location.LatLng.Longitude}");
         builder.AppendLine($"Latitude: {location.LatLng.Latitude}");
+        builder.AppendLine("");
+      }
+
+      if (location.TextQuery is not null)
+      {
+        builder.AppendLine($"Query: {location.TextQuery}");
         builder.AppendLine("");
       }
 
