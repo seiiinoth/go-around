@@ -86,6 +86,20 @@ namespace go_around.Services
       if (msg.Location is not null)
       {
         location.LatLng = new LatLng { Latitude = msg.Location.Latitude, Longitude = msg.Location.Longitude };
+
+        GetAddressLookupQueryInput getAddressLookupQueryInput = new()
+        {
+          Latlng = new GoogleGeocoding.Models.Location { Lat = msg.Location.Latitude, Lng = msg.Location.Longitude },
+          Language = "uk",
+          Region = "UA"
+        };
+
+        var searchResult = await _googleGeocodingService.GetAddressLookupAsync(getAddressLookupQueryInput);
+
+        if (searchResult.Results.Count > 0)
+        {
+          location.Title = searchResult.Results.First().Formatted_Address;
+        }
       }
 
       if (msg.Text is not null)
@@ -104,6 +118,8 @@ namespace go_around.Services
         GetAddressGeocodingQueryInput getAddressGeocodingQueryInput = new()
         {
           Address = location.TextQuery,
+          Language = "uk",
+          Region = "UA"
         };
 
         var searchResult = await _googleGeocodingService.GetAddressGeocodingAsync(getAddressGeocodingQueryInput);
