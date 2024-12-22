@@ -1,6 +1,6 @@
 using GooglePlaces.Models;
 
-namespace GooglePlaces.Services
+namespace GooglePlaces.Interfaces
 {
   public interface IGooglePlacesService
   {

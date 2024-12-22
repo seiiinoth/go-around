@@ -3,6 +3,7 @@ using go_around.Models;
 using go_around.Services;
 using go_around.Interfaces;
 using GooglePlaces.Services;
+using GooglePlaces.Interfaces;
 using GoogleGeocoding.Services;
 using GoogleGeocoding.Interfaces;
 using Microsoft.Extensions.Options;
