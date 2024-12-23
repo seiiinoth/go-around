@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="HelloMessage" xml:space="preserve">
+    <value>Ласкаво просимо до Go Around!
+
+          GoAround – це зручний та інтуїтивно зрозумілий сервіс, який допоможе легко знаходити цікаві місця поблизу.
+          Більше не потрібно витрачати години на пошуки розваг чи місць для відпочинку.
+          З GoAround ви миттєво отримаєте персоналізований список закладів відповідно до ваших уподобань
+    </value>
+  </data>
+  <data name="SelectInterfaceLanguage" xml:space="preserve">
+    <value>Виберіть мову інтерфейсу</value>
+  </data>
+  <data name="EnterLocationErrorMessage" xml:space="preserve">
+    <value>Будь ласка, вкажіть своє правильне місцезнаходження, щоб знайти місця поблизу</value>
+  </data>
+  <data name="EnterLocation" xml:space="preserve">
+    <value>Укажіть своє місцезнаходження, щоб знайти місця поблизу
+            або введіть адресу вручну
+    </value>
+  </data>
+  <data name="EnterLocationShort" xml:space="preserve">
+    <value>Введіть вручну або надішліть поточну адресу</value>
+  </data>
+  <data name="ProvideLocation" xml:space="preserve">
+    <value>Укажіть своє місцезнаходження, щоб знайти місця поблизу</value>
+  </data>
+  <data name="DontHaveSavedLocations" xml:space="preserve">
+    <value>У вас немає збережених місць</value>
+  </data>
+  <data name="BackToMenu" xml:space="preserve">
+    <value>Назад до меню</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>Підтвердити</value>
+  </data>
+  <data name="SavedLocations" xml:space="preserve">
+    <value>Ваші збережені місця</value>
+  </data>
+  <data name="LocationAt" xml:space="preserve">
+    <value>Розташування за адресою</value>
+  </data>
+  <data name="UseSavedLocations" xml:space="preserve">
+    <value>Використовувати мої збережені місця</value>
+  </data>
+  <data name="SelectAppropriateOption" xml:space="preserve">
+    <value>Виберіть відповідний варіант</value>
+  </data>
+  <data name="SpecifyRadius" xml:space="preserve">
+    <value>Вкажіть радіус у метрах, навколо якого буде здійснюватися пошук.
+            Значення має бути вказане як ціле число без крапок і ком.
+    </value>
+  </data>
+  <data name="ViewSavedLocations" xml:space="preserve">
+    <value>Переглянути збережені місця</value>
+  </data>
+  <data name="Longitude" xml:space="preserve">
+    <value>Довгота</value>
+  </data>
+  <data name="Latitude" xml:space="preserve">
+    <value>Широта</value>
+  </data>
+  <data name="Query" xml:space="preserve">
+    <value>Запит</value>
+  </data>
+  <data name="Radius" xml:space="preserve">
+    <value>Радіус</value>
+  </data>
+  <data name="SelectedCategories" xml:space="preserve">
+    <value>Вибрані категорії</value>
+  </data>
+  <data name="GetPlaces" xml:space="preserve">
+    <value>Переглянути місця</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Видалити</value>
+  </data>
+  <data name="LocationRemoved" xml:space="preserve">
+    <value>Розташування видалено</value>
+  </data>
+  <data name="LocationNotFound" xml:space="preserve">
+    <value>Розташування не знайдено</value>
+  </data>
+  <data name="Rating" xml:space="preserve">
+    <value>Рейтинг</value>
+  </data>
+  <data name="Address" xml:space="preserve">
+    <value>Адреса</value>
+  </data>
+  <data name="PreviousPlace" xml:space="preserve">
+    <value>Попереднє місце</value>
+  </data>
+  <data name="NextPlace" xml:space="preserve">
+    <value>Наступне місце</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Назад</value>
+  </data>
+  <data name="ToLocationsList" xml:space="preserve">
+    <value>До списку місць</value>
+  </data>
+</root>

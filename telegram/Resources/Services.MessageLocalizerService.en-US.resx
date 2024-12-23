@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="HelloMessage" xml:space="preserve">
+    <value>Welcome to Go Around!
+
+          GoAround is a convenient and intuitive service that will help you easily find interesting places nearby.
+          No more spending hours searching for entertainment or places to relax.
+          With GoAround, you will instantly receive a personalized list of establishments according to your preferences
+    </value>
+  </data>
+  <data name="SelectInterfaceLanguage" xml:space="preserve">
+    <value>Select interface language</value>
+  </data>
+  <data name="EnterLocationErrorMessage" xml:space="preserve">
+    <value>Please, provide your correct location to find places near you</value>
+  </data>
+  <data name="EnterLocation" xml:space="preserve">
+    <value>Provide your location to find places near you
+            or enter your address manually
+    </value>
+  </data>
+  <data name="EnterLocationShort" xml:space="preserve">
+    <value>Enter manually or send your current address</value>
+  </data>
+  <data name="ProvideLocation" xml:space="preserve">
+    <value>Provide your location to find places near you</value>
+  </data>
+  <data name="DontHaveSavedLocations" xml:space="preserve">
+    <value>You don't have saved locations</value>
+  </data>
+  <data name="BackToMenu" xml:space="preserve">
+    <value>Back to menu</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="SavedLocations" xml:space="preserve">
+    <value>Your saved locations:</value>
+  </data>
+  <data name="LocationAt" xml:space="preserve">
+    <value>Location at</value>
+  </data>
+  <data name="UseSavedLocations" xml:space="preserve">
+    <value>Use my saved location</value>
+  </data>
+  <data name="SelectAppropriateOption" xml:space="preserve">
+    <value>Select the appropriate option</value>
+  </data>
+  <data name="SpecifyRadius" xml:space="preserve">
+    <value>Specify the radius in meters around which the search will be performed.
+            The value must be specified as an integer, without periods or commas.
+    </value>
+  </data>
+  <data name="ViewSavedLocations" xml:space="preserve">
+    <value>View saved locations</value>
+  </data>
+  <data name="LocationNotFound" xml:space="preserve">
+    <value>Location not found</value>
+  </data>
+  <data name="Longitude" xml:space="preserve">
+    <value>Longitude</value>
+  </data>
+  <data name="Latitude" xml:space="preserve">
+    <value>Latitude</value>
+  </data>
+  <data name="Query" xml:space="preserve">
+    <value>Query</value>
+  </data>
+  <data name="Radius" xml:space="preserve">
+    <value>Radius</value>
+  </data>
+  <data name="SelectedCategories" xml:space="preserve">
+    <value>Selected categories</value>
+  </data>
+  <data name="GetPlaces" xml:space="preserve">
+    <value>Get places</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="LocationRemoved" xml:space="preserve">
+    <value>Location removed</value>
+  </data>
+  <data name="Rating" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Address" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="PreviousPlace" xml:space="preserve">
+    <value>Previous place</value>
+  </data>
+  <data name="NextPlace" xml:space="preserve">
+    <value>Next place</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="ToLocationsList" xml:space="preserve">
+    <value>To locations list</value>
+  </data>
+</root>

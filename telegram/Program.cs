@@ -6,7 +6,13 @@ using GooglePlaces.Services;
 using GooglePlaces.Interfaces;
 using GoogleGeocoding.Services;
 using GoogleGeocoding.Interfaces;
+using System.Globalization;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Localization;
+using Microsoft.AspNetCore.Localization;
+
+[assembly: RootNamespace("go_around")]
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
@@ -26,12 +32,28 @@ IHost host = Host.CreateDefaultBuilder(args)
                 return new TelegramBotClient(options, httpClient);
               });
 
+      services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+      CultureInfo[] supportedCultures =
+      [
+          new CultureInfo("en-US"),
+          new CultureInfo("uk-UA")
+      ];
+
+      services.Configure<RequestLocalizationOptions>(options =>
+      {
+        options.DefaultRequestCulture = new RequestCulture("uk-UA");
+        options.SupportedCultures = supportedCultures;
+        options.SupportedUICultures = supportedCultures;
+      });
+
       services.AddScoped<UpdateHandler>();
       services.AddScoped<ReceiverService>();
       services.AddHostedService<PollingService>();
 
       services.AddTransient<IGooglePlacesService, GooglePlacesService>();
       services.AddTransient<IGoogleGeocodingService, GoogleGeocodingService>();
+      services.AddTransient<IMessageLocalizerService, MessageLocalizerService>();
 
       services.AddTransient<IStoreService, StoreService>();
       services.AddTransient<IHttpCacheService, HttpCacheService>();
