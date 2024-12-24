@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
   <data name="HelloMessage" xml:space="preserve">
-    <value>Ласкаво просимо до Go Around!
+    <value>Ласкаво просимо до GoAround!
 
-          GoAround – це зручний та інтуїтивно зрозумілий сервіс, який допоможе легко знаходити цікаві місця поблизу.
-          Більше не потрібно витрачати години на пошуки розваг чи місць для відпочинку.
-          З GoAround ви миттєво отримаєте персоналізований список закладів відповідно до ваших уподобань
+GoAround – це зручний та інтуїтивно зрозумілий сервіс, який допоможе легко знаходити цікаві місця поблизу.
+Більше не потрібно витрачати години на пошуки розваг чи місць для відпочинку.
+З GoAround ви миттєво отримаєте персоналізований список закладів відповідно до ваших уподобань
     </value>
   </data>
   <data name="SelectInterfaceLanguage" xml:space="preserve">
@@ -15,8 +15,7 @@
     <value>Будь ласка, вкажіть своє правильне місцезнаходження, щоб знайти місця поблизу</value>
   </data>
   <data name="EnterLocation" xml:space="preserve">
-    <value>Укажіть своє місцезнаходження, щоб знайти місця поблизу
-            або введіть адресу вручну
+    <value>Укажіть своє місцезнаходження, щоб знайти місця поблизу або введіть адресу вручну
     </value>
   </data>
   <data name="EnterLocationShort" xml:space="preserve">
@@ -38,7 +37,10 @@
     <value>Ваші збережені місця</value>
   </data>
   <data name="LocationAt" xml:space="preserve">
-    <value>Розташування за адресою</value>
+    <value>Розташування</value>
+  </data>
+  <data name="UnknownLocation" xml:space="preserve">
+    <value>Невідома локація</value>
   </data>
   <data name="UseSavedLocations" xml:space="preserve">
     <value>Використовувати мої збережені місця</value>
@@ -47,9 +49,11 @@
     <value>Виберіть відповідний варіант</value>
   </data>
   <data name="SpecifyRadius" xml:space="preserve">
-    <value>Вкажіть радіус у метрах, навколо якого буде здійснюватися пошук.
-            Значення має бути вказане як ціле число без крапок і ком.
+    <value>Вкажіть радіус у метрах, навколо якого буде здійснюватися пошук. Значення має бути вказане як ціле число без крапок і ком.
     </value>
+  </data>
+  <data name="SpecifyPlacesCategories" xml:space="preserve">
+    <value>Вкажіть необхідні категорії місць</value>
   </data>
   <data name="ViewSavedLocations" xml:space="preserve">
     <value>Переглянути збережені місця</value>
@@ -84,6 +88,9 @@
   <data name="Rating" xml:space="preserve">
     <value>Рейтинг</value>
   </data>
+  <data name="Reviews" xml:space="preserve">
+    <value>Відгуки</value>
+  </data>
   <data name="Address" xml:space="preserve">
     <value>Адреса</value>
   </data>
@@ -98,5 +105,8 @@
   </data>
   <data name="ToLocationsList" xml:space="preserve">
     <value>До списку місць</value>
+  </data>
+  <data name="ToLocationInfo" xml:space="preserve">
+    <value>До інформації про локацію</value>
   </data>
 </root>

@@ -3,9 +3,9 @@
   <data name="HelloMessage" xml:space="preserve">
     <value>Welcome to Go Around!
 
-          GoAround is a convenient and intuitive service that will help you easily find interesting places nearby.
-          No more spending hours searching for entertainment or places to relax.
-          With GoAround, you will instantly receive a personalized list of establishments according to your preferences
+GoAround is a convenient and intuitive service that will help you easily find interesting places nearby.
+No more spending hours searching for entertainment or places to relax.
+With GoAround, you will instantly receive a personalized list of establishments according to your preferences
     </value>
   </data>
   <data name="SelectInterfaceLanguage" xml:space="preserve">
@@ -15,8 +15,7 @@
     <value>Please, provide your correct location to find places near you</value>
   </data>
   <data name="EnterLocation" xml:space="preserve">
-    <value>Provide your location to find places near you
-            or enter your address manually
+    <value>Provide your location to find places near you or enter your address manually
     </value>
   </data>
   <data name="EnterLocationShort" xml:space="preserve">
@@ -40,6 +39,9 @@
   <data name="LocationAt" xml:space="preserve">
     <value>Location at</value>
   </data>
+  <data name="UnknownLocation" xml:space="preserve">
+    <value>Unknown location</value>
+  </data>
   <data name="UseSavedLocations" xml:space="preserve">
     <value>Use my saved location</value>
   </data>
@@ -47,9 +49,11 @@
     <value>Select the appropriate option</value>
   </data>
   <data name="SpecifyRadius" xml:space="preserve">
-    <value>Specify the radius in meters around which the search will be performed.
-            The value must be specified as an integer, without periods or commas.
+    <value>Specify the radius in meters around which the search will be performed. The value must be specified as an integer, without periods or commas.
     </value>
+  </data>
+  <data name="SpecifyPlacesCategories" xml:space="preserve">
+    <value>Specify the places categories</value>
   </data>
   <data name="ViewSavedLocations" xml:space="preserve">
     <value>View saved locations</value>
@@ -84,6 +88,9 @@
   <data name="Rating" xml:space="preserve">
     <value>Rating</value>
   </data>
+  <data name="Reviews" xml:space="preserve">
+    <value>Reviews</value>
+  </data>
   <data name="Address" xml:space="preserve">
     <value>Address</value>
   </data>
@@ -98,5 +105,8 @@
   </data>
   <data name="ToLocationsList" xml:space="preserve">
     <value>To locations list</value>
+  </data>
+  <data name="ToLocationInfo" xml:space="preserve">
+    <value>To location info</value>
   </data>
 </root>
