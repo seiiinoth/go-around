@@ -14,9 +14,10 @@ using GoogleGeocoding.Interfaces;
 
 namespace go_around.Services
 {
-  public class UpdateHandler(ITelegramBotClient bot, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService, IGoogleGeocodingService googleGeocodingService) : IUpdateHandler
+  public class UpdateHandler(ITelegramBotClient bot, IMessageLocalizerService messageLocalizerService, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService, IGoogleGeocodingService googleGeocodingService) : IUpdateHandler
   {
     private readonly ITelegramBotClient _bot = bot;
+    private readonly IMessageLocalizerService _messageLocalizerService = messageLocalizerService;
     private readonly ILogger<UpdateHandler> _logger = logger;
     private readonly ISessionsStoreService _sessionsStoreService = sessionsStoreService;
     private readonly IPlacesStoreService _placesStoreService = placesStoreService;
@@ -48,6 +49,8 @@ namespace go_around.Services
     {
       _logger.LogInformation("Receive message type: {MessageType}", msg.Type);
 
+      var locale = await _userSessionService.GetSessionLanguage(msg.Chat.Id.ToString());
+
       if (msg.Text is not { } || !msg.Text.StartsWith('/'))
       {
         var workingStage = await _userSessionService.GetSessionWorkingStage(msg.Chat.Id.ToString());
@@ -55,9 +58,9 @@ namespace go_around.Services
 
         await (workingStage switch
         {
-          WorkingStage.ENTER_LOCATION => EnterLocationHandler(msg),
-          WorkingStage.ENTER_RADIUS => EnterLocationRadiusHandler(msg, editedLocation),
-          _ => Usage(msg)
+          WorkingStage.ENTER_LOCATION => EnterLocationHandler(msg, locale),
+          WorkingStage.ENTER_RADIUS => EnterLocationRadiusHandler(msg, editedLocation, locale),
+          _ => Usage(msg, locale)
         });
 
         return;
@@ -68,20 +71,20 @@ namespace go_around.Services
 
       Message sentMessage = await (messageText.Split(' ')[0] switch
       {
-        "/start" => SendMenu(msg),
-        "/locations" => ListLocations(msg),
-        "/language" => SendLanguageSelector(msg),
-        _ => Usage(msg)
+        "/start" => SendMenu(msg, locale),
+        "/locations" => ListLocations(msg, locale),
+        "/language" => SendLanguageSelector(msg, locale),
+        _ => Usage(msg, locale)
       });
 
       _logger.LogInformation("The message was sent with id: {SentMessageId}", sentMessage.Id);
     }
 
-    async Task<Message> SendLanguageSelector(Message msg)
+    async Task<Message> SendLanguageSelector(Message msg, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
 
-      const string selectLanguageMessage = "Select interface language";
+      string selectLanguageMessage = _messageLocalizerService.GetMessage("SelectInterfaceLanguage", locale);
 
       var inlineMarkup = new InlineKeyboardMarkup();
 
@@ -94,7 +97,7 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, selectLanguageMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> SetLanguageHandler(Message msg, string language)
+    async Task<Message> SetLanguageHandler(Message msg, string language, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
 
@@ -105,7 +108,7 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, changeLanguageMessage, parseMode: ParseMode.Html);
     }
 
-    async Task<Message> EnterLocationHandler(Message msg)
+    async Task<Message> EnterLocationHandler(Message msg, Language locale)
     {
       await _sessionsStoreService.DeleteSessionAttribute(msg.Chat.Id.ToString(), "ReplyKeyboardMarkupMessage");
       await _userSessionService.ClearSessionWorkingStage(msg.Chat.Id.ToString());
@@ -138,7 +141,7 @@ namespace go_around.Services
 
       if (location.TextQuery is null && location.LatLng is null)
       {
-        const string errorMessage = "Please, provide your correct location to find places near you";
+        string errorMessage = _messageLocalizerService.GetMessage("EnterLocationErrorMessage", locale);
         return await _bot.SendMessage(msg.Chat, errorMessage, parseMode: ParseMode.Html);
       }
 
@@ -156,7 +159,7 @@ namespace go_around.Services
         if (searchResult.Results.Count > 1)
         {
           var locations = searchResult.Results.Where(result => result.Formatted_Address != null).Select(result => result.Formatted_Address!);
-          return await SendTextLocationsSelect(msg, locations.ToList());
+          return await SendTextLocationsSelect(msg, locations.ToList(), locale);
         }
 
         if (searchResult.Results.Count > 0)
@@ -175,17 +178,17 @@ namespace go_around.Services
 
       await _bot.SendMessage(msg.Chat, "👍", replyMarkup: new ReplyKeyboardRemove());
 
-      return await GoAroundLocation(msg, locationId);
+      return await GoAroundLocation(msg, locationId, locale);
     }
 
-    async Task<Message> EnterLocationRadiusHandler(Message msg, string locationId)
+    async Task<Message> EnterLocationRadiusHandler(Message msg, string locationId, Language locale)
     {
       await _sessionsStoreService.DeleteSessionAttribute(msg.Chat.Id.ToString(), "ReplyKeyboardMarkupMessage");
       await _userSessionService.ClearSessionWorkingStage(msg.Chat.Id.ToString());
 
       if (msg.Text is null)
       {
-        return await SendLocationRadiusRequest(msg, locationId);
+        return await SendLocationRadiusRequest(msg, locationId, locale);
       }
 
       try
@@ -203,26 +206,26 @@ namespace go_around.Services
           await _bot.SendMessage(msg.Chat, "👍", replyMarkup: new ReplyKeyboardRemove());
         }
 
-        return await GoAroundLocation(msg, locationId);
+        return await GoAroundLocation(msg, locationId, locale);
       }
       catch (Exception err)
       {
         _logger.LogInformation("Error parsing location radius: {err}", err);
-        return await SendLocationRadiusRequest(msg, locationId);
+        return await SendLocationRadiusRequest(msg, locationId, locale);
       }
     }
 
-    async Task<Message> ConfirmLocationPlacesCategories(Message msg, string locationId)
+    async Task<Message> ConfirmLocationPlacesCategories(Message msg, string locationId, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
 
       var locationPlacesCategories = await _userSessionService.GetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId);
       await _userSessionService.SetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId, locationPlacesCategories);
 
-      return await GoAroundLocation(msg, locationId);
+      return await GoAroundLocation(msg, locationId, locale);
     }
 
-    async Task<Message> Usage(Message msg)
+    async Task<Message> Usage(Message msg, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
       const string usage = """
@@ -234,14 +237,14 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, usage, parseMode: ParseMode.Html, replyMarkup: new ReplyKeyboardRemove());
     }
 
-    async Task<Message> ListLocations(Message msg)
+    async Task<Message> ListLocations(Message msg, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
       var savedLocations = await _userSessionService.GetSavedLocations(msg.Chat.Id.ToString());
 
       if (savedLocations.Count == 0)
       {
-        const string locationsNotFoundMessage = "You don't have saved locations";
+        string locationsNotFoundMessage = _messageLocalizerService.GetMessage("DontHaveSavedLocations", locale);
 
         var backToMenuButton = new InlineKeyboardMarkup()
                                     .AddButton("Back to menu", "GoToMenu");
@@ -260,7 +263,7 @@ namespace go_around.Services
         return await _bot.SendMessage(msg.Chat, locationsNotFoundMessage, parseMode: ParseMode.Html, replyMarkup: backToMenuButton);
       }
 
-      const string listLocationsMessage = "Your saved locations:";
+      string listLocationsMessage = _messageLocalizerService.GetMessage("SavedLocations", locale);
 
       var inlineMarkup = new InlineKeyboardMarkup();
 
@@ -272,22 +275,22 @@ namespace go_around.Services
         {
           if (location.Value.TextQuery is not null)
           {
-            locationTitle = $"Location at {location.Value.TextQuery}";
+            locationTitle = $"{_messageLocalizerService.GetMessage("LocationAt", locale)} {location.Value.TextQuery}";
           }
           else if (location.Value.LatLng is not null)
           {
-            locationTitle = $"Location at {location.Value.LatLng.Latitude} {location.Value.LatLng.Longitude}";
+            locationTitle = $"{_messageLocalizerService.GetMessage("LocationAt", locale)} {location.Value.LatLng.Latitude} {location.Value.LatLng.Longitude}";
           }
           else
           {
-            locationTitle = "Unknown location";
+            locationTitle = _messageLocalizerService.GetMessage("UnknownLocation", locale);
           }
         }
 
         inlineMarkup.AddNewRow().AddButton(locationTitle, $"LocInf {location.Key}");
       });
 
-      inlineMarkup.AddNewRow().AddButton("Back to menu", "GoToMenu");
+      inlineMarkup.AddNewRow().AddButton(_messageLocalizerService.GetMessage("BackToMenu", locale), "GoToMenu");
 
       if (msg.From?.IsBot == true)
       {
@@ -322,22 +325,19 @@ namespace go_around.Services
       }
     }
 
-    async Task<Message> SendSelectLocationRequest(Message msg)
+    async Task<Message> SendSelectLocationRequest(Message msg, Language locale)
     {
       if ((await _userSessionService.GetSavedLocations(msg.Chat.Id.ToString())).Count == 0)
       {
-        return await SendLocationRequest(msg);
+        return await SendLocationRequest(msg, locale);
       }
 
-      const string requestUserLocationMessage = """
-            Provide your location to find places near you
-            or enter your address manually
-            """;
+      string requestUserLocationMessage = _messageLocalizerService.GetMessage("EnterLocation", locale);
 
       var inlineMarkup = new InlineKeyboardMarkup()
-                              .AddButton("Enter manually or send your current address", "EnterOrSendLocation")
-                              .AddNewRow().AddButton("Use my saved location", "ToLocationsList")
-                              .AddNewRow().AddButton("Back to menu", "GoToMenu");
+                              .AddButton(_messageLocalizerService.GetMessage("EnterLocationShort", locale), "EnterOrSendLocation")
+                              .AddNewRow().AddButton(_messageLocalizerService.GetMessage("UseSavedLocations", locale), "ToLocationsList")
+                              .AddNewRow().AddButton(_messageLocalizerService.GetMessage("BackToMenu", locale), "GoToMenu");
 
       if (msg.From?.IsBot == true)
       {
@@ -353,14 +353,14 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, requestUserLocationMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> SendLocationRequest(Message msg)
+    async Task<Message> SendLocationRequest(Message msg, Language locale)
     {
       await _userSessionService.SetSessionWorkingStage(msg.Chat.Id.ToString(), WorkingStage.ENTER_LOCATION);
 
       var replyMarkup = new ReplyKeyboardMarkup(true)
                             .AddButton(KeyboardButton.WithRequestLocation("Location"));
 
-      const string requestLocationMessage = "Provide your location to find places near you";
+      string requestLocationMessage = _messageLocalizerService.GetMessage("ProvideLocation", locale);
 
       var message = await _bot.SendMessage(msg.Chat, requestLocationMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
 
@@ -369,7 +369,7 @@ namespace go_around.Services
       return message;
     }
 
-    async Task<Message> SendTextLocationsSelect(Message msg, List<string> locations)
+    async Task<Message> SendTextLocationsSelect(Message msg, List<string> locations, Language locale)
     {
       await _userSessionService.SetSessionWorkingStage(msg.Chat.Id.ToString(), WorkingStage.ENTER_LOCATION);
 
@@ -381,7 +381,7 @@ namespace go_around.Services
         replyMarkup.AddNewRow();
       });
 
-      const string textLocationSelectMessage = "Select the appropriate option";
+      string textLocationSelectMessage = _messageLocalizerService.GetMessage("SelectAppropriateOption", locale);
 
       var message = await _bot.SendMessage(msg.Chat, textLocationSelectMessage, parseMode: ParseMode.Html, replyMarkup: replyMarkup);
 
@@ -390,17 +390,12 @@ namespace go_around.Services
       return message;
     }
 
-    async Task<Message> SendLocationRadiusRequest(Message msg, string locationId)
+    async Task<Message> SendLocationRadiusRequest(Message msg, string locationId, Language locale)
     {
       await _userSessionService.SetSessionWorkingStage(msg.Chat.Id.ToString(), WorkingStage.ENTER_RADIUS);
       await _userSessionService.EnableLocationEditMode(msg.Chat.Id.ToString(), locationId);
 
-      string locationRadiusRequestMessage = $"""
-      Specify the radius in meters around which the search will be performed.
-      The value must be specified as an integer, without periods or commas.
-
-      <b>Example:</b> {new Random().Next(200, 5000)}
-      """;
+      string locationRadiusRequestMessage = _messageLocalizerService.GetMessage("SpecifyRadius", locale);
 
       var inlineMarkup = new ReplyKeyboardMarkup(true)
                             .AddButtons("500", "1000")
@@ -416,12 +411,12 @@ namespace go_around.Services
       return message;
     }
 
-    async Task<Message> SendLocationPlacesTypesRequest(Message msg, string locationId)
+    async Task<Message> SendLocationPlacesTypesRequest(Message msg, string locationId, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
       var selectedPlacesCategories = await _userSessionService.GetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId);
 
-      string locationTypesRequestMessage = "Specify the places categories";
+      string locationTypesRequestMessage = _messageLocalizerService.GetMessage("SpecifyPlacesCategories", locale);
 
       var inlineMarkup = new InlineKeyboardMarkup();
       List<InlineKeyboardButton> currentRow = [];
@@ -464,8 +459,8 @@ namespace go_around.Services
         inlineMarkup.AddNewRow().AddButtons([.. currentRow]);
       }
 
-      inlineMarkup.AddNewRow().AddButton("Confirm", $"ConfirmPlacesCategories {locationId}")
-                  .AddNewRow().AddButton("Back to menu", "GoToMenu");
+      inlineMarkup.AddNewRow().AddButton(_messageLocalizerService.GetMessage("Confirm", locale), $"ConfirmPlacesCategories {locationId}")
+                  .AddNewRow().AddButton(_messageLocalizerService.GetMessage("BackToMenu", locale), "GoToMenu");
 
       if (msg.From?.IsBot == true)
       {
@@ -481,19 +476,19 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, locationTypesRequestMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> EditLocation(Message msg, string locationId, string locationField)
+    async Task<Message> EditLocation(Message msg, string locationId, string locationField, Language locale)
     {
       return await (Enum.Parse<SavedLocationField>(locationField) switch
       {
-        SavedLocationField.LatLng => SendLocationRequest(msg),
-        SavedLocationField.TextQuery => SendLocationRequest(msg),
-        SavedLocationField.Radius => SendLocationRadiusRequest(msg, locationId),
-        SavedLocationField.PlacesCategories => SendLocationPlacesTypesRequest(msg, locationId),
+        SavedLocationField.LatLng => SendLocationRequest(msg, locale),
+        SavedLocationField.TextQuery => SendLocationRequest(msg, locale),
+        SavedLocationField.Radius => SendLocationRadiusRequest(msg, locationId, locale),
+        SavedLocationField.PlacesCategories => SendLocationPlacesTypesRequest(msg, locationId, locale),
         _ => throw new NotImplementedException(),
       });
     }
 
-    async Task<Message> SelectLocationPlacesCategory(Message msg, string locationId, string category)
+    async Task<Message> SelectLocationPlacesCategory(Message msg, string locationId, string category, Language locale)
     {
       var locationPlaces = await _userSessionService.GetLocationPlacesCategories(msg.Chat.Id.ToString(), locationId);
 
@@ -506,25 +501,21 @@ namespace go_around.Services
         await _userSessionService.AddLocationPlacesCategory(msg.Chat.Id.ToString(), locationId, category);
       }
 
-      return await SendLocationPlacesTypesRequest(msg, locationId);
+      return await SendLocationPlacesTypesRequest(msg, locationId, locale);
     }
 
-    async Task<Message> SendMenu(Message msg)
+    async Task<Message> SendMenu(Message msg, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
-      const string startMessage = """
-            Welcome to <b>Go Around</b>!
 
-            <b>GoAround</b> is a convenient and intuitive service that will help you easily find interesting places nearby.
-            No more spending hours searching for entertainment or places to relax.
-            With GoAround, you will instantly receive a personalized list of establishments according to your preferences
-            """;
+      string startMessage = _messageLocalizerService.GetMessage("HelloMessage", locale);
+
       var inlineMarkup = new InlineKeyboardMarkup()
                               .AddButton("GoAround!", "GoAround");
 
       if ((await _userSessionService.GetSavedLocations(msg.Chat.Id.ToString())).Count > 0)
       {
-        inlineMarkup.AddNewRow().AddButton("View saved location", "ToLocationsList");
+        inlineMarkup.AddNewRow().AddButton(_messageLocalizerService.GetMessage("ViewSavedLocations", locale), "ToLocationsList");
       }
 
       if (msg.From?.IsBot == true)
@@ -541,16 +532,16 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, startMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> SendLocationInfo(Message msg, string locationId)
+    async Task<Message> SendLocationInfo(Message msg, string locationId, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
       var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
 
       if (location is null)
       {
-        const string locationNotFoundMessage = "Location not found";
+        string locationNotFoundMessage = _messageLocalizerService.GetMessage("LocationNotFound", locale);
         var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup()
-                                                .AddButton("Back to locations list", $"ToLocationsList");
+                                                .AddButton(_messageLocalizerService.GetMessage("ViewSavedLocations", locale), $"ToLocationsList");
 
         if (msg.From?.IsBot == true)
         {
@@ -568,31 +559,31 @@ namespace go_around.Services
 
       var builder = new StringBuilder();
 
-      builder.AppendLine(location.Title ?? $"Unknown location");
+      builder.AppendLine(location.Title ?? _messageLocalizerService.GetMessage("UnknownLocation", locale));
       builder.AppendLine("");
 
       if (location.LatLng is not null)
       {
-        builder.AppendLine($"Longitude: {location.LatLng.Longitude}");
-        builder.AppendLine($"Latitude: {location.LatLng.Latitude}");
+        builder.AppendLine($"{_messageLocalizerService.GetMessage("Longitude", locale)}: {location.LatLng.Longitude}");
+        builder.AppendLine($"{_messageLocalizerService.GetMessage("Latitude", locale)}: {location.LatLng.Latitude}");
         builder.AppendLine("");
       }
 
       if (location.TextQuery is not null)
       {
-        builder.AppendLine($"Query: {location.TextQuery}");
+        builder.AppendLine($"{_messageLocalizerService.GetMessage("Query", locale)}: {location.TextQuery}");
         builder.AppendLine("");
       }
 
       if (location.Radius > 0)
       {
-        builder.AppendLine($"Radius: {location.Radius}");
+        builder.AppendLine($"{_messageLocalizerService.GetMessage("Radius", locale)}: {location.Radius}");
         builder.AppendLine("");
       }
 
       if (location.PlacesCategories?.Count > 0)
       {
-        builder.Append($"Selected categories: ");
+        builder.Append($"{_messageLocalizerService.GetMessage("SelectedCategories", locale)}: ");
 
         location.PlacesCategories?.ToList().ForEach(category =>
         {
@@ -618,15 +609,15 @@ namespace go_around.Services
       }
       else
       {
-        inlineMarkup.AddButton($"Get places ({location.Places.Count})", $"PlaceInf {locationId} {location.Places.First()}")
+        inlineMarkup.AddButton($"{_messageLocalizerService.GetMessage("GetPlaces", locale)} ({location.Places.Count})", $"PlaceInf {locationId} {location.Places.First()}")
                     .AddNewRow();
       }
 
-      inlineMarkup.AddButton("Remove", $"RemoveLocation {locationId}")
+      inlineMarkup.AddButton(_messageLocalizerService.GetMessage("Remove", locale), $"RemoveLocation {locationId}")
                   // .AddNewRow()
                   // .AddButton("Edit", $"EditLocation {locationId}")
                   .AddNewRow()
-                  .AddButton("Back to locations list", $"ToLocationsList");
+                  .AddButton(_messageLocalizerService.GetMessage("ViewSavedLocations", locale), $"ToLocationsList");
 
       if (msg.From?.IsBot == true)
       {
@@ -642,18 +633,18 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, locationInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> RemoveSavedLocation(Message msg, string locationId)
+    async Task<Message> RemoveSavedLocation(Message msg, string locationId, Language locale)
     {
       var result = await _userSessionService.RemoveSavedLocation(msg.Chat.Id.ToString(), locationId);
 
-      string message = "Location removed";
+      string message = _messageLocalizerService.GetMessage("LocationRemoved", locale);
       if (!result)
       {
-        message = "Location not found";
+        message = _messageLocalizerService.GetMessage("LocationNotFound", locale);
       }
 
       var inlineMarkup = new InlineKeyboardMarkup()
-                              .AddButton("Back to locations list", $"ToLocationsList");
+                              .AddButton(_messageLocalizerService.GetMessage("ViewSavedLocations", locale), $"ToLocationsList");
 
       if (msg.From?.IsBot == true)
       {
@@ -669,16 +660,17 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, message, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> SendPlaceInfo(Message msg, string locationId, string placeId)
+    async Task<Message> SendPlaceInfo(Message msg, string locationId, string placeId, Language locale)
     {
       await RemoveMessageWithReplyKeyboard(msg);
       var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
 
       if (location is null)
       {
-        const string placeNotFoundMessage = "Location not found";
+        string placeNotFoundMessage = _messageLocalizerService.GetMessage("LocationNotFound", locale);
+
         var placeNotFoundButtonsMarkup = new InlineKeyboardMarkup()
-                                                .AddButton("Back to location info", $"LocInf {locationId}");
+                                                .AddButton(_messageLocalizerService.GetMessage("ToLocationInfo", locale), $"LocInf {locationId}");
 
         if (msg.From?.IsBot == true)
         {
@@ -723,19 +715,19 @@ namespace go_around.Services
 
         if (place.Rating.HasValue)
         {
-          builder.AppendLine($"Rating: {place.Rating?.ToString("0.0⭐️")}");
+          builder.AppendLine($"{_messageLocalizerService.GetMessage("Rating", locale)}: {place.Rating?.ToString("0.0⭐️")}");
           builder.AppendLine("");
         }
 
         if (!string.IsNullOrEmpty(place.FormattedAddress))
         {
-          builder.AppendLine($"Address: {place.FormattedAddress}");
+          builder.AppendLine($"{_messageLocalizerService.GetMessage("Address", locale)}: {place.FormattedAddress}");
           builder.AppendLine("");
         }
 
         if (!string.IsNullOrEmpty(place.GoogleMapsLinks?.ReviewsUri))
         {
-          inlineMarkup.AddButton(InlineKeyboardButton.WithUrl("Reviews", place.GoogleMapsLinks.ReviewsUri))
+          inlineMarkup.AddButton(InlineKeyboardButton.WithUrl(_messageLocalizerService.GetMessage("Reviews", locale), place.GoogleMapsLinks.ReviewsUri))
                       .AddNewRow();
         }
 
@@ -750,15 +742,15 @@ namespace go_around.Services
         if (placeListIndex != 0)
         {
           var prevPlaceIndex = location.Places.IndexOf(placeId) - 1;
-          inlineMarkup.AddButton("« Previous place", $"PlaceInf {locationId} {location.Places[prevPlaceIndex]}");
+          inlineMarkup.AddButton($"« {_messageLocalizerService.GetMessage("PreviousPlace", locale)}", $"PlaceInf {locationId} {location.Places[prevPlaceIndex]}");
         }
         if (placeListIndex < (location.Places.Count - 1))
         {
           var nextPlaceIndex = location.Places.IndexOf(placeId) + 1;
-          inlineMarkup.AddButton("Next place »", $"PlaceInf {locationId} {location.Places[nextPlaceIndex]}");
+          inlineMarkup.AddButton($"{_messageLocalizerService.GetMessage("NextPlace", locale)} »", $"PlaceInf {locationId} {location.Places[nextPlaceIndex]}");
         }
 
-        inlineMarkup.AddNewRow().AddButton("Back", $"LocInf {locationId}");
+        inlineMarkup.AddNewRow().AddButton(_messageLocalizerService.GetMessage("Back", locale), $"LocInf {locationId}");
 
         await _bot.EditMessageMedia(msg.Chat, msg.MessageId, mediaPhoto);
         return await _bot.EditMessageCaption(msg.Chat, msg.MessageId, placeInfo, replyMarkup: inlineMarkup);
@@ -778,15 +770,16 @@ namespace go_around.Services
       return await _bot.SendMessage(msg.Chat, placeInfo, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
     }
 
-    async Task<Message> GoAroundLocation(Message msg, string locationId)
+    async Task<Message> GoAroundLocation(Message msg, string locationId, Language locale)
     {
       var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
 
       if (location is null)
       {
-        const string locationNotFoundMessage = "Location not found";
+        string locationNotFoundMessage = _messageLocalizerService.GetMessage("LocationNotFound", locale);
+
         var locationNotFoundButtonsMarkup = new InlineKeyboardMarkup()
-                                                .AddButton("To locations list", $"ToLocationsList");
+                                                .AddButton(_messageLocalizerService.GetMessage("ViewSavedLocations", locale), $"ToLocationsList");
 
         if (msg.From?.IsBot == true)
         {
@@ -797,27 +790,27 @@ namespace go_around.Services
 
       if (location.LatLng is null && location.TextQuery is null)
       {
-        return await SendLocationRequest(msg);
+        return await SendLocationRequest(msg, locale);
       }
 
       if (location.Radius == 0)
       {
-        return await SendLocationRadiusRequest(msg, locationId);
+        return await SendLocationRadiusRequest(msg, locationId, locale);
       }
 
       if (location.PlacesCategories is null)
       {
-        return await SendLocationPlacesTypesRequest(msg, locationId);
+        return await SendLocationPlacesTypesRequest(msg, locationId, locale);
       }
 
       await _userSessionService.DisableLocationEditMode(msg.Chat.Id.ToString(), locationId);
 
-      await ExecuteSearch(msg, locationId);
+      await ExecuteSearch(msg, locationId, locale);
 
-      return await SendLocationInfo(msg, locationId);
+      return await SendLocationInfo(msg, locationId, locale);
     }
 
-    async Task ExecuteSearch(Message msg, string locationId)
+    async Task ExecuteSearch(Message msg, string locationId, Language locale)
     {
       var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
 
@@ -865,23 +858,25 @@ namespace go_around.Services
         return;
       }
 
+      var locale = await _userSessionService.GetSessionLanguage(msg.Chat.Id.ToString());
+
       var args = callbackQuery.Data?.Split(' ');
 
       await (args?[0] switch
       {
-        "GoToMenu" => SendMenu(msg),
-        "GoAround" => SendSelectLocationRequest(msg),
-        "EnterOrSendLocation" => SendLocationRequest(msg),
-        "GoAroundLocation" => GoAroundLocation(msg, args?[1] ?? "0"),
+        "GoToMenu" => SendMenu(msg, locale),
+        "GoAround" => SendSelectLocationRequest(msg, locale),
+        "EnterOrSendLocation" => SendLocationRequest(msg, locale),
+        "GoAroundLocation" => GoAroundLocation(msg, args?[1] ?? "0", locale),
         // "EditLocation" => EditLocation(msg, args?[1] ?? "0", args?[2] ?? "0"),
-        "LocInf" => SendLocationInfo(msg, args?[1] ?? "0"),
-        "PlaceInf" => SendPlaceInfo(msg, args?[1] ?? "0", args?[2] ?? "0"),
-        "ConfirmPlacesCategories" => ConfirmLocationPlacesCategories(msg, args?[1] ?? "0"),
-        "RemoveLocation" => RemoveSavedLocation(msg, args?[1] ?? "0"),
-        "SelLocPlcCat" => SelectLocationPlacesCategory(msg, args?[1] ?? "0", callbackQuery.Data?.Split(' ')[2] ?? "0"),
-        "ToLocationsList" => ListLocations(msg),
-        "SetLang" => SetLanguageHandler(msg, args?[1] ?? "0"),
-        _ => Usage(msg)
+        "LocInf" => SendLocationInfo(msg, args?[1] ?? "0", locale),
+        "PlaceInf" => SendPlaceInfo(msg, args?[1] ?? "0", args?[2] ?? "0", locale),
+        "ConfirmPlacesCategories" => ConfirmLocationPlacesCategories(msg, args?[1] ?? "0", locale),
+        "RemoveLocation" => RemoveSavedLocation(msg, args?[1] ?? "0", locale),
+        "SelLocPlcCat" => SelectLocationPlacesCategory(msg, args?[1] ?? "0", callbackQuery.Data?.Split(' ')[2] ?? "0", locale),
+        "ToLocationsList" => ListLocations(msg, locale),
+        "SetLang" => SetLanguageHandler(msg, args?[1] ?? "0", locale),
+        _ => Usage(msg, locale)
       });
     }
 
