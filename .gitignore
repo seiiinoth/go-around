@@ -6,3 +6,6 @@
 backups
 
 *.env*
+
+# MacOS stuff
+.DS_Store
