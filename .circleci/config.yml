@@ -22,9 +22,9 @@ jobs:
 
       - run:
           name: Build `telegram` service Docker image for amd64
-          working_directory: services
+          working_directory: telegram
           command: |
-            docker build -t public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-amd64 -f telegram/Dockerfile .
+            docker build -t public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-amd64 -f Dockerfile .
             docker push public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-amd64
 
   build_and_push_images_arm64:
@@ -45,9 +45,9 @@ jobs:
 
       - run:
           name: Build `telegram-app` service Docker image for arm64
-          working_directory: services
+          working_directory: telegram
           command: |
-            docker build -t public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-arm64 -f telegram/Dockerfile .
+            docker build -t public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-arm64 -f Dockerfile .
             docker push public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-arm64
 
   create-manifest:
