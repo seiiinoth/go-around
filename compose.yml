@@ -1,4 +1,14 @@
 services:
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    command:
+      - "--label-enable"
+      - "--interval"
+      - "30"
+      - "--rolling-restart"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   telegram:
     build:
       context: ./telegram
