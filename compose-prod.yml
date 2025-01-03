@@ -1,0 +1,3 @@
+services:
+  telegram:
+    image: public.ecr.aws/l0d9d4c1/go-around/telegram:latest
