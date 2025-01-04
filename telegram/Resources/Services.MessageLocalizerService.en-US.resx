@@ -109,4 +109,10 @@ With GoAround, you will instantly receive a personalized list of establishments 
   <data name="ToLocationInfo" xml:space="preserve">
     <value>To location info</value>
   </data>
+  <data name="SelectSearchMode" xml:space="preserve">
+    <value>Select search mode</value>
+  </data>
+  <data name="Forbidden" xml:space="preserve">
+    <value>Forbidden</value>
+  </data>
 </root>

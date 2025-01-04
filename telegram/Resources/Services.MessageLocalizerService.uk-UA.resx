@@ -109,4 +109,10 @@ GoAround – це зручний та інтуїтивно зрозумілий 
   <data name="ToLocationInfo" xml:space="preserve">
     <value>До інформації про локацію</value>
   </data>
+  <data name="SelectSearchMode" xml:space="preserve">
+    <value>Виберіть режим пошуку</value>
+  </data>
+  <data name="Forbidden" xml:space="preserve">
+    <value>Заборонено</value>
+  </data>
 </root>

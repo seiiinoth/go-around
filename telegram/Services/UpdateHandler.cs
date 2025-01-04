@@ -14,7 +14,7 @@ using GoogleGeocoding.Interfaces;
 
 namespace go_around.Services
 {
-  public class UpdateHandler(ITelegramBotClient bot, IMessageLocalizerService messageLocalizerService, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IGooglePlacesService googlePlacesService, IGoogleGeocodingService googleGeocodingService) : IUpdateHandler
+  public class UpdateHandler(ITelegramBotClient bot, IMessageLocalizerService messageLocalizerService, ILogger<UpdateHandler> logger, ISessionsStoreService sessionsStoreService, IPlacesStoreService placesStoreService, IUserSessionService userSessionService, IStoreService storeService, IGooglePlacesService googlePlacesService, IGoogleGeocodingService googleGeocodingService, IConfiguration configuration) : IUpdateHandler
   {
     private readonly ITelegramBotClient _bot = bot;
     private readonly IMessageLocalizerService _messageLocalizerService = messageLocalizerService;
@@ -22,8 +22,10 @@ namespace go_around.Services
     private readonly ISessionsStoreService _sessionsStoreService = sessionsStoreService;
     private readonly IPlacesStoreService _placesStoreService = placesStoreService;
     private readonly IUserSessionService _userSessionService = userSessionService;
+    private readonly IStoreService _storeService = storeService;
     private readonly IGooglePlacesService _googlePlacesService = googlePlacesService;
     private readonly IGoogleGeocodingService _googleGeocodingService = googleGeocodingService;
+    private readonly long _adminId = long.Parse(configuration["BotConfiguration:AdminId"] ?? throw new Exception("Telegram AdminId is required"));
 
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
@@ -74,6 +76,7 @@ namespace go_around.Services
         "/start" => SendMenu(msg, locale),
         "/locations" => ListLocations(msg, locale),
         "/language" => SendLanguageSelector(msg, locale),
+        "/search" => SendSearchSwitch(msg, locale),
         _ => Usage(msg, locale)
       });
 
@@ -95,6 +98,35 @@ namespace go_around.Services
       }
 
       return await _bot.SendMessage(msg.Chat, selectLanguageMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+
+    async Task<Message> SendSearchSwitch(Message msg, Language locale)
+    {
+      await RemoveMessageWithReplyKeyboard(msg);
+
+      if (msg.Chat.Id != _adminId)
+      {
+        return await _bot.SendMessage(msg.Chat, _messageLocalizerService.GetMessage("Forbidden", locale), parseMode: ParseMode.Html);
+      }
+
+      string selectLanguageMessage = _messageLocalizerService.GetMessage("SelectSearchMode", locale);
+
+      var inlineMarkup = new InlineKeyboardMarkup()
+                              .AddButton("Enable", $"SetSearchMode {true}")
+                              .AddButton("Disable", $"SetSearchMode {false}");
+
+      return await _bot.SendMessage(msg.Chat, selectLanguageMessage, parseMode: ParseMode.Html, replyMarkup: inlineMarkup);
+    }
+
+    async Task<Message> SetSearchModeHandler(Message msg, string searchMode, Language locale)
+    {
+      await RemoveMessageWithReplyKeyboard(msg);
+
+      await _storeService.HashSetAsync("global", "searchEnabled", searchMode.ToString());
+
+      string changeSearchModeMessage = "👍";
+
+      return await _bot.SendMessage(msg.Chat, changeSearchModeMessage, parseMode: ParseMode.Html);
     }
 
     async Task<Message> SetLanguageHandler(Message msg, string language, Language locale)
@@ -812,6 +844,15 @@ namespace go_around.Services
 
     async Task ExecuteSearch(Message msg, string locationId, Language locale)
     {
+      var searchEnabled = await _storeService.HashGetAsync("global", "searchEnabled");
+
+      if (searchEnabled == "False" || searchEnabled.IsNull)
+      {
+        var messageText = "Search is disabled";
+        var message = await _bot.SendMessage(msg.Chat, messageText, parseMode: ParseMode.Html);
+        return;
+      }
+
       var location = await _userSessionService.GetSavedLocation(msg.Chat.Id.ToString(), locationId);
 
       if (location is not null)
@@ -876,6 +917,7 @@ namespace go_around.Services
         "SelLocPlcCat" => SelectLocationPlacesCategory(msg, args?[1] ?? "0", callbackQuery.Data?.Split(' ')[2] ?? "0", locale),
         "ToLocationsList" => ListLocations(msg, locale),
         "SetLang" => SetLanguageHandler(msg, args?[1] ?? "0", locale),
+        "SetSearchMode" => SetSearchModeHandler(msg, args?[1] ?? "0", locale),
         _ => Usage(msg, locale)
       });
     }

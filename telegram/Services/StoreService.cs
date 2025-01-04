@@ -33,6 +33,11 @@ namespace go_around.Services
       await _db.HashSetAsync(key, hashFields, flags);
     }
 
+    public async Task<bool> HashSetAsync(RedisKey key, RedisValue hashField, RedisValue value, When when = When.Always, CommandFlags flags = CommandFlags.None)
+    {
+      return await _db.HashSetAsync(key, hashField, value, when, flags);
+    }
+
     public async Task HashDeleteAsync(RedisKey key, RedisValue hashField, CommandFlags flags = CommandFlags.None)
     {
       await _db.HashDeleteAsync(key, hashField, flags);
