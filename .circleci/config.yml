@@ -4,7 +4,7 @@ orbs:
   aws-cli: circleci/aws-cli@5.1
 
 jobs:
-  build_and_push_images_amd64:
+  build_amd64:
     machine:
       image: ubuntu-2404:2024.05.1
       docker_layer_caching: true
@@ -27,7 +27,7 @@ jobs:
             docker build -t public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-amd64 -f Dockerfile .
             docker push public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-amd64
 
-  build_and_push_images_arm64:
+  build_arm64:
     machine:
       image: ubuntu-2204:current
       docker_layer_caching: true
@@ -44,7 +44,7 @@ jobs:
             aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l0d9d4c1
 
       - run:
-          name: Build `telegram-app` service Docker image for arm64
+          name: Build `telegram` service Docker image for arm64
           working_directory: telegram
           command: |
             docker build -t public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-arm64 -f Dockerfile .
@@ -62,7 +62,7 @@ jobs:
             aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/l0d9d4c1
 
       - run:
-          name: Create manifest for `telegram-app` service
+          name: Create multi-arch manifest for `telegram` service Docker image
           command: |
             docker manifest create public.ecr.aws/l0d9d4c1/go-around/telegram:latest public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-arm64 public.ecr.aws/l0d9d4c1/go-around/telegram:$CIRCLE_SHA1-amd64
             docker manifest push public.ecr.aws/l0d9d4c1/go-around/telegram:latest
@@ -70,13 +70,13 @@ jobs:
 workflows:
   build:
     jobs:
-      - build_and_push_images_amd64:
+      - build_amd64:
           filters:
             branches:
               only:
                 - main
 
-      - build_and_push_images_arm64:
+      - build_arm64:
           filters:
             branches:
               only:
@@ -84,8 +84,8 @@ workflows:
 
       - create-manifest:
           requires:
-            - build_and_push_images_amd64
-            - build_and_push_images_arm64
+            - build_amd64
+            - build_arm64
           filters:
             branches:
               only:
