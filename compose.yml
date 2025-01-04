@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - BotConfiguration__BotToken
+      - BotConfiguration__AdminId
       - GoogleCloud__ApiKey
       - ConnectionStrings__RedisCache
       - ConnectionStrings__RedisStore
