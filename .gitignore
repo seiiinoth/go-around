@@ -5,7 +5,7 @@
 
 backups
 
-*.env*
+*.env
 
 # MacOS stuff
 .DS_Store
