@@ -1,4 +1,4 @@
-<a href="https://t.me/goaround_bot"><img width="100%" src="https://raw.githubusercontent.com/seiiinoth/go-around/master/assets/logo-2.png" alt="GoAround Bot" /></a>
+<a href="https://t.me/goaround_bot"><img width="100%" src="assets/logo-text.jpg" alt="GoAround Bot" /></a>
 <br />
 <br />
 
