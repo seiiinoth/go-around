@@ -1,3 +1,15 @@
 services:
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    command:
+      - "--label-enable"
+      - "--interval"
+      - "30"
+      - "--rolling-restart"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   telegram:
     image: public.ecr.aws/l0d9d4c1/go-around/telegram:latest
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
