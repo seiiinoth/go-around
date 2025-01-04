@@ -736,7 +736,7 @@ namespace go_around.Services
 
         if (place.Photos is not null && place.Photos?.Count > 0)
         {
-          mediaPhoto = new InputMediaPhoto(place.Photos?.First().GoogleMapsUri!);
+          mediaPhoto = new InputMediaPhoto(place.Photos?.First().GoogleMapsUri ?? "https://placehold.co/400x400?text=No+Image");
         }
 
         if (!string.IsNullOrEmpty(place.DisplayName?.Text))
