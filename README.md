@@ -15,3 +15,27 @@
 GoAround is a convenient and intuitive service that will help you easily find interesting places nearby. No more spending hours searching for entertainment or places to relax. With GoAround, you will instantly receive a personalized list of establishments according to your preferences
 
 The project actively uses containerization and the image is publicly available: [Container Registry](https://gallery.ecr.aws/l0d9d4c1/go-around/telegram)
+
+# Self hosting
+
+Before beginning to work with self hosted GoAround, make sure to properly setup `.env` file by copying `.env.example` and modifying credentials
+
+## Local launch
+
+```text
+docker compose up --build
+```
+
+## Or production launch
+
+```text
+docker compose -f compose.yml -f compose-prod.yml up
+```
+
+## Service infrastructure diagram
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/infrastructure-diagram-dark.jpg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/infrastructure-diagram-light.jpg">
+  <img alt="GoAround bot service infrastructure diagram" src="docs/infrastructure-diagram-light.jpg">
+</picture>
